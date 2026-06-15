@@ -103,6 +103,56 @@ p {
 
 /* 紅色放棄按鈕 */
 /* ============================================
+   管理照片畫面
+   ============================================ */
+.person-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background-color: #fff;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.person-row .person-photos {
+  display: flex;
+  gap: 8px;
+}
+
+.person-row .person-photo {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  object-fit: cover;
+  background-color: #E8A87C;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  cursor: pointer;
+  border: 2px dashed transparent;
+}
+
+.person-row .person-photo.empty {
+  border: 2px dashed #D9C9B8;
+  color: #D9C9B8;
+}
+
+.person-row .person-info {
+  flex: 1;
+}
+
+.person-row .person-info input {
+  font-size: 18px;
+  border: 1px solid #D9C9B8;
+  border-radius: 8px;
+  padding: 6px 10px;
+  width: 100%;
+}
+
+/* ============================================
    開發用 Debug 資訊條 (上線前隱藏)
    ============================================ */
 .debug-bar {

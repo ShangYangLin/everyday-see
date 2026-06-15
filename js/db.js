@@ -240,13 +240,18 @@ async function getAppState(key, defaultValue = null) {
 // 工具函式
 // ============================================
 
-// 將 Blob 轉換成可顯示的 Object URL
-function blobToURL(blob) {
-  if (!blob) return null;
-  return URL.createObjectURL(blob);
+// 將 base64字串 轉換成可顯示的圖片來源 (直接可用於 img.src 或 background-image)
+function blobToURL(base64String) {
+  if (!base64String) return null;
+  return base64String; // base64 data URL 本身就可以直接當作 src
 }
 
-// 將圖片檔案 (File) 轉成 Blob (其實 File 本身就是 Blob，但這裡留作未來壓縮處理的擴充點)
+// 將圖片檔案 (File) 轉成 base64字串，存入 IndexedDB 更穩定（避免Blob相容性問題）
 async function fileToBlob(file) {
-  return file; // File 物件本身已經是 Blob，未來可在此加入圖片壓縮邏輯
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result); // data:image/...;base64,xxxx
+    reader.onerror = (e) => reject(e);
+    reader.readAsDataURL(file);
+  });
 }

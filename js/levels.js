@@ -8,8 +8,8 @@
 // pairCount = 需要的「對數」
 // requiredCardCount = 照片庫至少需要幾組照片才能玩這關
 const LEVEL_CONFIG = {
-  1: { gridClass: "grid-2x2", pairCount: 2, requiredCardCount: 2, type: "photo" },
-  2: { gridClass: "grid-2x2", pairCount: 2, requiredCardCount: 1, type: "photo_dual" }, // 同一人兩張照片
+  1: { gridClass: "grid-2x2", pairCount: 2, requiredCardCount: 2, type: "photo_four_initial" },
+  2: { gridClass: "grid-3x2", pairCount: 3, requiredCardCount: 2, type: "photo" },
   3: { gridClass: "grid-3x2", pairCount: 3, requiredCardCount: 3, type: "photo" },
   4: { gridClass: "grid-3x2", pairCount: 3, requiredCardCount: 3, type: "photo_mixed_dual" },
   5: { gridClass: "grid-4x2", pairCount: 4, requiredCardCount: 4, type: "photo" },
@@ -87,6 +87,18 @@ async function generateLevelDeck(level, availableCards) {
   let deck = [];
 
   switch (config.type) {
+    case "photo_four_initial": {
+      // 第1關：使用最初收集的2位家人，各自一張照片，組成2對 (2x2 = 4張牌)
+      const card1 = usableCards.find(c => c.cardId === "card_slot_01") || usableCards[0];
+      const card2 = usableCards.find(c => c.cardId === "card_slot_02") || usableCards[1] || usableCards[0];
+
+      [card1, card2].forEach(card => {
+        deck.push(makeCardEntry(card, "current"));
+        deck.push(makeCardEntry(card, "current"));
+      });
+      break;
+    }
+
     case "photo": {
       // 純照片配對：取 pairCount 組，各一對
       const chosen = pickRandom(usableCards, config.pairCount);

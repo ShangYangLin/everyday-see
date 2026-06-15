@@ -42,6 +42,15 @@ const TRANSLATIONS = {
     shareButton: "邀請家人",
 
     addPhoto: "新增/更新照片",
+    managePhotosTitle: "管理家人照片",
+    addNewPerson: "新增一位家人",
+    backButton: "返回",
+    currentPhotoLabel: "現在",
+    secondPhotoLabel: "第二張",
+    addPhotoSlot: "新增",
+    relationNamePlaceholder: "家人關係/姓名",
+    deletePersonButton: "刪除這位家人",
+    confirmDeletePerson: "確定要刪除這位家人嗎？相關照片會一併移除。",
 
     relationDefaults: {
       spouse: "老伴",
@@ -89,6 +98,15 @@ const TRANSLATIONS = {
     shareButton: "Invite Family",
 
     addPhoto: "Add/Update Photo",
+    managePhotosTitle: "Manage Family Photos",
+    addNewPerson: "Add a Family Member",
+    backButton: "Back",
+    currentPhotoLabel: "Current",
+    secondPhotoLabel: "Second",
+    addPhotoSlot: "Add",
+    relationNamePlaceholder: "Relation/Name",
+    deletePersonButton: "Remove This Person",
+    confirmDeletePerson: "Remove this family member? Their photos will also be removed.",
 
     relationDefaults: {
       spouse: "Spouse",
@@ -136,6 +154,15 @@ const TRANSLATIONS = {
     shareButton: "Invitar Familia",
 
     addPhoto: "Añadir/Actualizar Foto",
+    managePhotosTitle: "Administrar Fotos Familiares",
+    addNewPerson: "Añadir un Familiar",
+    backButton: "Volver",
+    currentPhotoLabel: "Actual",
+    secondPhotoLabel: "Segunda",
+    addPhotoSlot: "Añadir",
+    relationNamePlaceholder: "Relación/Nombre",
+    deletePersonButton: "Eliminar Esta Persona",
+    confirmDeletePerson: "¿Eliminar a este familiar? Sus fotos también se eliminarán.",
 
     relationDefaults: {
       spouse: "Cónyuge",
