@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>每天見 - See You Every Day</title>
+
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#E8A87C">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ============================================
+       畫面容器：所有畫面用 JS 動態切換顯示/隱藏
+       ============================================ -->
+  <div id="app" class="app-container">
+
+    <!-- Step 1-2: 歡迎畫面 -->
+    <div id="screen-welcome" class="screen">
+      <h1 id="welcome-title">每天見</h1>
+      <p id="welcome-subtitle">陪伴 · 記憶 · 每一天</p>
+      <button class="btn" id="btn-start">開始</button>
+    </div>
+
+    <!-- Step 3/7: 上傳照片畫面 -->
+    <div id="screen-upload" class="screen hidden">
+      <h2 id="upload-prompt">請上傳與您最親密的一位家人照片</h2>
+      <div class="upload-area" id="upload-area">
+        <span class="upload-icon">📷</span>
+      </div>
+      <input type="file" id="file-input" accept="image/*" capture="environment" style="display:none;">
+
+      <!-- 「這是誰？」輸入框，上傳後才顯示 -->
+      <div id="who-is-this-block" class="hidden">
+        <p id="who-is-this-label">這是誰？</p>
+        <input type="text" class="input-field" id="relation-input" placeholder="">
+        <button class="btn" id="btn-confirm-relation">確定</button>
+      </div>
+
+      <button class="btn btn-skip hidden" id="btn-skip-upload">跳過</button>
+    </div>
+
+    <!-- 遊戲畫面 -->
+    <div id="screen-game" class="screen hidden">
+      <div id="debug-bar" class="debug-bar"></div>
+      <div id="game-container"></div>
+      <button class="btn-giveup" id="btn-giveup">放棄 / 休息一下</button>
+    </div>
+
+    <!-- 記憶任務畫面 (Step 12) -->
+    <div id="screen-memory-task" class="screen hidden overlay">
+      <h2 id="memory-task-title"></h2>
+      <p id="memory-task-question"></p>
+      <input type="text" class="input-field" id="memory-task-name" placeholder="姓名">
+      <input type="tel" class="input-field" id="memory-task-phone" placeholder="電話號碼">
+      <button class="btn" id="btn-save-memory-task">記下來</button>
+    </div>
+
+    <!-- 過關 / 完成畫面 -->
+    <div id="screen-complete" class="screen hidden overlay">
+      <h2 id="complete-title">過關了！</h2>
+      <div id="complete-media"></div>
+      <button class="btn" id="btn-continue">繼續</button>
+    </div>
+
+    <!-- 主頁面 / 儀表板 -->
+    <div id="screen-dashboard" class="screen hidden dashboard">
+      <h1 id="dashboard-title">每天見</h1>
+
+      <div class="dashboard-item">
+        <h3 id="streak-label">連續訓練天數</h3>
+        <p id="streak-value">0</p>
+      </div>
+
+      <div class="dashboard-item">
+        <h3 id="album-label">家人卡片蒐集冊</h3>
+        <div class="family-album-grid" id="family-album-grid"></div>
+        <button class="btn btn-secondary" id="btn-add-photo">新增/更新照片</button>
+      </div>
+
+      <div class="dashboard-item">
+        <h3 id="memos-label">重要記憶事項</h3>
+        <div id="memos-list"></div>
+      </div>
+
+      <button class="btn" id="btn-share">邀請家人</button>
+      <button class="btn btn-secondary" id="btn-play-today">開始今天的遊戲</button>
+    </div>
+
+  </div>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/levels.js"></script>
+  <script src="js/scoring.js"></script>
+  <script src="js/app.js"></script>
+
+  <script>
+    // 註冊 Service Worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(err => {
+          console.warn('Service worker registration failed:', err);
+        });
+      });
+    }
+  </script>
+
+</body>
+</html>

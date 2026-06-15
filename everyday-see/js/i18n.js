@@ -1,0 +1,167 @@
+// ============================================
+// 語系文案 i18n.js
+// 不提供手動切換，依 navigator.language 自動偵測
+// ============================================
+
+const TRANSLATIONS = {
+  zh: {
+    appName: "每天見",
+    welcomeTitle: "每天見",
+    welcomeSubtitle: "陪伴 · 記憶 · 每一天",
+    welcomeStart: "開始",
+
+    askUploadFirst: "請上傳與您最親密的一位家人照片",
+    askWhoIsThis: "這是誰？",
+    askUploadAnother: "請再上傳一位家人照片",
+    uploadButton: "選擇照片",
+    confirmButton: "確定",
+    skipButton: "跳過",
+
+    askUploadSecondPhoto: "請再上傳一張 {name} 的不同照片",
+
+    memoryTaskTitle: "如果您願意告訴我對您重要的事情，我會幫助您記得。",
+    memoryTaskQuestion: "您的重要聯絡人是？他的電話是？",
+    memoryTaskNamePlaceholder: "姓名",
+    memoryTaskPhonePlaceholder: "電話號碼",
+    memoryTaskSave: "記下來",
+
+    giveUpButton: "放棄 / 休息一下",
+    greatJobMessage: "您今天很棒囉！我們休息一下，明天再見！",
+
+    levelComplete: "過關了！",
+    gameComplete: "全部完成！",
+
+    hintButton: "家人給的小提示",
+
+    inviteShare: "邀請家人傳送他們的近況",
+    inviteShareDesc: "點擊這裡傳送邀請，請家人錄一段問候影片喔！",
+
+    familyAlbum: "家人卡片蒐集冊",
+    importantMemos: "重要記憶事項",
+    streakDays: "連續訓練天數",
+    shareButton: "邀請家人",
+
+    addPhoto: "新增/更新照片",
+
+    relationDefaults: {
+      spouse: "老伴",
+      son: "兒子",
+      daughter: "女兒",
+      grandchild: "孫子"
+    }
+  },
+
+  en: {
+    appName: "See You Every Day",
+    welcomeTitle: "See You Every Day",
+    welcomeSubtitle: "Companionship · Memory · Every Day",
+    welcomeStart: "Start",
+
+    askUploadFirst: "Please upload a photo of someone close to you",
+    askWhoIsThis: "Who is this?",
+    askUploadAnother: "Please upload another family photo",
+    uploadButton: "Choose Photo",
+    confirmButton: "Confirm",
+    skipButton: "Skip",
+
+    askUploadSecondPhoto: "Please upload another photo of {name}",
+
+    memoryTaskTitle: "If you'd like to tell me something important, I'll help you remember it.",
+    memoryTaskQuestion: "Who is your important contact? What is their phone number?",
+    memoryTaskNamePlaceholder: "Name",
+    memoryTaskPhonePlaceholder: "Phone Number",
+    memoryTaskSave: "Remember This",
+
+    giveUpButton: "Take a Break",
+    greatJobMessage: "You did great today! Let's rest now, see you tomorrow!",
+
+    levelComplete: "Level Complete!",
+    gameComplete: "All Done!",
+
+    hintButton: "Hint from Family",
+
+    inviteShare: "Invite Family to Share Updates",
+    inviteShareDesc: "Tap here to invite family to record a greeting video!",
+
+    familyAlbum: "Family Album",
+    importantMemos: "Important Memories",
+    streakDays: "Days in a Row",
+    shareButton: "Invite Family",
+
+    addPhoto: "Add/Update Photo",
+
+    relationDefaults: {
+      spouse: "Spouse",
+      son: "Son",
+      daughter: "Daughter",
+      grandchild: "Grandchild"
+    }
+  },
+
+  es: {
+    appName: "Nos Vemos Cada Día",
+    welcomeTitle: "Nos Vemos Cada Día",
+    welcomeSubtitle: "Compañía · Memoria · Cada Día",
+    welcomeStart: "Comenzar",
+
+    askUploadFirst: "Por favor suba una foto de alguien cercano a usted",
+    askWhoIsThis: "¿Quién es?",
+    askUploadAnother: "Por favor suba otra foto familiar",
+    uploadButton: "Elegir Foto",
+    confirmButton: "Confirmar",
+    skipButton: "Omitir",
+
+    askUploadSecondPhoto: "Por favor suba otra foto de {name}",
+
+    memoryTaskTitle: "Si desea contarme algo importante, le ayudaré a recordarlo.",
+    memoryTaskQuestion: "¿Quién es su contacto importante? ¿Cuál es su número de teléfono?",
+    memoryTaskNamePlaceholder: "Nombre",
+    memoryTaskPhonePlaceholder: "Número de Teléfono",
+    memoryTaskSave: "Recordar Esto",
+
+    giveUpButton: "Tomar un Descanso",
+    greatJobMessage: "¡Lo hizo muy bien hoy! Descansemos, ¡hasta mañana!",
+
+    levelComplete: "¡Nivel Completado!",
+    gameComplete: "¡Todo Listo!",
+
+    hintButton: "Pista de la Familia",
+
+    inviteShare: "Invitar a la Familia",
+    inviteShareDesc: "¡Toque aquí para invitar a un familiar a grabar un saludo!",
+
+    familyAlbum: "Álbum Familiar",
+    importantMemos: "Memorias Importantes",
+    streakDays: "Días Consecutivos",
+    shareButton: "Invitar Familia",
+
+    addPhoto: "Añadir/Actualizar Foto",
+
+    relationDefaults: {
+      spouse: "Cónyuge",
+      son: "Hijo",
+      daughter: "Hija",
+      grandchild: "Nieto"
+    }
+  }
+};
+
+// 偵測使用者語系，回傳對應的文案物件
+function detectLocale() {
+  const lang = (navigator.language || "en").toLowerCase();
+  if (lang.startsWith("zh")) return "zh";
+  if (lang.startsWith("es")) return "es";
+  return "en";
+}
+
+const LOCALE = detectLocale();
+const T = TRANSLATIONS[LOCALE];
+
+// 簡單的字串模板替換，例如 t("askUploadSecondPhoto", {name: "兒子"})
+function t(key, params = {}) {
+  let str = T[key] || key;
+  Object.keys(params).forEach(p => {
+    str = str.replace(`{${p}}`, params[p]);
+  });
+  return str;
+}
