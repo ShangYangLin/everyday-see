@@ -48,14 +48,51 @@ function getTimeLimit(level) {
 // 這裡用簡單的 emoji + 色塊作為佔位，之後可替換為實際圖片
 // ============================================
 const FALLBACK_PERSONS = [
-  { cardId: "fallback_01", relation: "家人A", emoji: "👵", color: "#F4C2A1" },
-  { cardId: "fallback_02", relation: "家人B", emoji: "👴", color: "#A1C2F4" },
-  { cardId: "fallback_03", relation: "家人C", emoji: "👩", color: "#F4A1C2" },
-  { cardId: "fallback_04", relation: "家人D", emoji: "👨", color: "#C2F4A1" },
-  { cardId: "fallback_05", relation: "家人E", emoji: "👧", color: "#F4E1A1" },
-  { cardId: "fallback_06", relation: "家人F", emoji: "👦", color: "#A1F4E1" },
-  { cardId: "fallback_07", relation: "家人G", emoji: "🧑", color: "#E1A1F4" },
-  { cardId: "fallback_08", relation: "家人H", emoji: "🧓", color: "#F4D1A1" }
+  {
+    cardId: "fallback_01",
+    relation: "白鬍子爺爺",
+    image: "/avatars/grandpa_whitebeard.png"
+  },
+  {
+    cardId: "fallback_02",
+    relation: "橘圍巾爺爺",
+    image: "/avatars/grandpa_orange_scarf.png"
+  },
+  {
+    cardId: "fallback_03",
+    relation: "年輕兒子",
+    image: "/avatars/young_son.png"
+  },
+  {
+    cardId: "fallback_04",
+    relation: "捲髮女兒",
+    image: "/avatars/daughter_curly.png"
+  },
+  {
+    cardId: "fallback_05",
+    relation: "花頭巾奶奶",
+    image: "/avatars/grandma_floral.png"
+  },
+  {
+    cardId: "fallback_06",
+    relation: "圍巾女士",
+    image: "/avatars/woman_beige_scarf.png"
+  },
+  {
+    cardId: "fallback_07",
+    relation: "鬍子男士",
+    image: "/avatars/man_beard.png"
+  },
+  {
+    cardId: "fallback_08",
+    relation: "長髮女生",
+    image: "/avatars/girl_longhair.png"
+  },
+  {
+    cardId: "fallback_09",
+    relation: "黑外套男生",
+    image: "/avatars/boy_blackjacket.png"
+  }
 ];
 
 // ============================================
@@ -78,8 +115,7 @@ async function generateLevelDeck(level, availableCards) {
       cardId: fallback.cardId,
       relation: fallback.relation,
       isFallback: true,
-      fallbackEmoji: fallback.emoji,
-      fallbackColor: fallback.color,
+      imageUrl: fallback.image,
       hidden: true
     });
   }
