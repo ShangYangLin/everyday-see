@@ -22,7 +22,7 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei", sans-serif;
   background-color: #FFF8F0;
   color: #4A3F35;
-  font-size: 20px;
+  font-size: 24px;
   line-height: 1.6;
   -webkit-user-select: none;
   user-select: none;
@@ -243,6 +243,8 @@ p {
 
 /* 不同關卡的網格佈局 */
 .grid-2x2 { grid-template-columns: repeat(2, 1fr); }
+.grid-2x3 { grid-template-columns: repeat(2, 1fr); }
+.grid-3x3 { grid-template-columns: repeat(3, 1fr); }
 .grid-3x2 { grid-template-columns: repeat(3, 1fr); }
 .grid-4x2 { grid-template-columns: repeat(4, 1fr); }
 .grid-5x2 { grid-template-columns: repeat(5, 1fr); }
@@ -275,6 +277,11 @@ p {
 .card.matched {
   opacity: 0.6;
   cursor: default;
+}
+
+.card.card-decorative {
+  opacity: 0.85;
+  box-shadow: none;
 }
 
 /* 文字卡（異質配對用） */

@@ -379,7 +379,7 @@ async function playLevel(level, options = {}) {
 function renderGameBoard() {
   const container = document.getElementById("game-container");
   container.innerHTML = "";
-  container.className = gameState.config.gridClass;
+  container.className = gameState.config.gridClass; // game-container是id選擇器，class可直接設定不影響id樣式
 
   gameState.deck.forEach((cardData, index) => {
     const cardEl = document.createElement("div");
