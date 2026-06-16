@@ -62,6 +62,7 @@ function applyTranslations() {
   document.getElementById("dashboard-title").textContent = t("appName");
   document.getElementById("streak-label").textContent = t("streakDays");
   document.getElementById("album-label").textContent = t("familyAlbum");
+  document.getElementById("album-hint-text").textContent = t("familyAlbumHint");
   document.getElementById("memos-label").textContent = t("importantMemos");
   document.getElementById("btn-add-photo").textContent = t("addPhoto");
   document.getElementById("btn-share").textContent = t("shareButton");
@@ -291,8 +292,64 @@ async function proceedOnboarding() {
       showMemoryTaskScreen();
       return;
 
-    // 記憶任務完成 → 結束引導，進主頁
+    // 記憶任務完成 → 問新家人D，進第6關
     case "memory_task_done":
+      appState.onboardingStep = "upload_D1";
+      showSinglePhotoUpload("card_slot_04", "askUploadAnother", false);
+      return;
+
+    // D1上傳完（或跳過）→ 進第6關
+    case "upload_D1":
+      appState.onboardingStep = "before_level_7";
+      await playLevel(6, { onComplete: () => proceedOnboarding() });
+      return;
+
+    // 第6關完成 → 問照片最少的家人補第2張
+    case "before_level_7": {
+      const allCards7 = (await getAllCards()).filter(c => !c.isFallback && c.imageCurrent);
+      const singlePhotoCards7 = allCards7.filter(c => !c.imagePast);
+      if (singlePhotoCards7.length > 0) {
+        const target = singlePhotoCards7[Math.floor(Math.random() * singlePhotoCards7.length)];
+        appState.onboardingStep = "upload_second_for_level7";
+        showSinglePhotoUpload(target.cardId, "askUploadSecondPhoto", true, { name: target.relation });
+      } else {
+        appState.onboardingStep = "before_level_8";
+        await playLevel(7, { onComplete: () => proceedOnboarding() });
+      }
+      return;
+    }
+
+    case "upload_second_for_level7":
+      appState.onboardingStep = "before_level_8";
+      await playLevel(7, { onComplete: () => proceedOnboarding() });
+      return;
+
+    // 第7關完成 → 不問，直接進第8關
+    case "before_level_8":
+      appState.onboardingStep = "before_level_9";
+      await playLevel(8, { onComplete: () => proceedOnboarding() });
+      return;
+
+    // 第8關完成 → 問新家人E
+    case "before_level_9":
+      appState.onboardingStep = "upload_E1";
+      showSinglePhotoUpload("card_slot_05", "askUploadAnother", false);
+      return;
+
+    // E1上傳完（或跳過）→ 進第9關
+    case "upload_E1":
+      appState.onboardingStep = "before_level_10";
+      await playLevel(9, { onComplete: () => proceedOnboarding() });
+      return;
+
+    // 第9關完成 → 不問，直接進第10關
+    case "before_level_10":
+      appState.onboardingStep = "onboarding_complete";
+      await playLevel(10, { onComplete: () => proceedOnboarding() });
+      return;
+
+    // 第10關完成 → 結束引導，進主頁
+    case "onboarding_complete":
       appState.onboardingStep = "done";
       await setAppState("onboarding_done", true);
       await setAppState("current_base_level", 1);
@@ -640,6 +697,11 @@ async function handleGiveUp() {
   // 記錄為 Grade 1
   appState.todayLevelResults.push({ level: appState.currentLevel, grade: 1 });
 
+  // 第7關開始：若放棄/卡關，標記這一關為「卡關」，明天不會跳到下一關
+  if (appState.currentLevel >= 7) {
+    appState.stuckAtLevel = appState.currentLevel;
+  }
+
   await addGameLog({
     date: getTodayDateString(),
     level: appState.currentLevel,
@@ -676,13 +738,14 @@ function showCompleteOverlay(title, mediaUrl, onContinue) {
       video.controls = false;
       mediaContainer.appendChild(video);
     } else {
+      // .gif、.png、.jpg 都走這裡；GIF會自動播放動畫
       const img = document.createElement("img");
       img.src = mediaUrl;
       mediaContainer.appendChild(img);
     }
   } else {
-    // 預設過關動畫：簡單的 emoji 慶祝
-    mediaContainer.innerHTML = '<div style="font-size: 80px; text-align:center;">🎉</div>';
+    // 預設過關動畫：CSS彈跳慶祝動畫（無須額外檔案）
+    mediaContainer.innerHTML = '<div class="celebration-emoji">🎉</div>';
   }
 
   document.getElementById("btn-continue").textContent = t("confirmButton");
@@ -700,7 +763,8 @@ function showCompleteOverlay(title, mediaUrl, onContinue) {
 async function endTodaySession(early = false) {
   hideGiveUpButton();
 
-  const todayScore = calculateDailyScore(appState.todayLevelResults);
+  const baseScore = calculateDailyScore(appState.todayLevelResults);
+  const todayScore = baseScore + (appState.todayBonusScore || 0);
   const todayDateStr = getTodayDateString();
   const hasFailedGrade = appState.todayLevelResults.some(r => r.grade === 1);
 
@@ -724,10 +788,16 @@ async function endTodaySession(early = false) {
   }
 
   const currentBaseLevel = await getAppState("current_base_level", 1);
-  const nextBaseLevel = calculateNextDayStartLevel(todayScore, prevScore, currentBaseLevel, hasFailedGrade);
+  let nextBaseLevel = calculateNextDayStartLevel(todayScore, prevScore, currentBaseLevel, hasFailedGrade);
+
+  // 第7關開始：若今天在某一關卡關/放棄，明天起始關卡不可超過該關（避免越級）
+  if (appState.stuckAtLevel && nextBaseLevel > appState.stuckAtLevel) {
+    nextBaseLevel = appState.stuckAtLevel;
+  }
 
   await setAppState("current_base_level", nextBaseLevel);
   await setAppState("last_play_date", todayDateStr);
+  appState.stuckAtLevel = null;
 
   // 顯示溫暖的結束訊息（不顯示失敗字眼）
   showCompleteOverlay(t("greatJobMessage"), null, async () => {
@@ -945,33 +1015,228 @@ function calculateStreak(sortedDates) {
 }
 
 // ============================================
-// 開始今天的遊戲（每日固定 5 關）
+// 開始今天的遊戲（每日固定 5 關 + 支線任務）
+// 第2天起：玩1關→小提醒問答→玩2關→新增重要事項→玩2關→小提醒問答(不重複)
 // ============================================
 async function startTodaySession() {
   appState.todayLevelResults = [];
   appState.giveUpCountToday = 0;
+  appState.todayQuizQuestionsAsked = [];
+  appState.todayBonusScore = 0;
 
   const baseLevel = await getAppState("current_base_level", 1);
   const levelsToPlay = [];
   for (let i = 0; i < SCORING_CONFIG.dailyLevelCount; i++) {
-    const lvl = Math.min(baseLevel + i, 5);
+    const lvl = Math.min(baseLevel + i, 10);
     levelsToPlay.push(lvl);
   }
+
+  const lastPlayDate = await getAppState("last_play_date", null);
+  const isFirstDay = !lastPlayDate;
+
+  appState.dailyLevelsToPlay = levelsToPlay;
+  appState.isFirstDayOfPlay = isFirstDay;
 
   await playLevelSequence(levelsToPlay, 0);
 }
 
-// 依序播放關卡序列
+// 依序播放關卡序列，並在指定關卡之間插入支線任務
 async function playLevelSequence(levels, index) {
   if (index >= levels.length) {
-    await endTodaySession(false);
+    await maybeShowRandomEndHint(() => endTodaySession(false));
     return;
   }
 
   const level = levels[index];
   await playLevel(level, {
-    onComplete: () => playLevelSequence(levels, index + 1)
+    onComplete: () => handleAfterLevelInSequence(levels, index)
   });
+}
+
+// 處理某一關結束後的支線任務插入點
+// 第一天（首刷引導）不觸發任何支線任務，維持原本5關連續的設計
+async function handleAfterLevelInSequence(levels, index) {
+  if (appState.isFirstDayOfPlay) {
+    await playLevelSequence(levels, index + 1);
+    return;
+  }
+
+  // index 0 = 剛玩完第1關 → 小提醒問答(第一次)
+  // index 2 = 剛玩完第3關 → 新增重要事項
+  // index 4 = 剛玩完第5關 → 小提醒問答(第二次，不重複)
+  if (index === 0) {
+    await showQuizScreen(() => playLevelSequence(levels, index + 1));
+  } else if (index === 2) {
+    await maybeShowAddMemoScreen(() => playLevelSequence(levels, index + 1));
+  } else {
+    await playLevelSequence(levels, index + 1);
+  }
+}
+
+// ============================================
+// 支線任務：小提醒問答
+// ============================================
+async function showQuizScreen(onContinue) {
+  const allTasks = await getAllMemoryTasks();
+
+  // 排除今天已經問過的題目
+  const available = allTasks.filter(task => !appState.todayQuizQuestionsAsked.includes(task.taskId));
+
+  if (available.length === 0) {
+    // 沒有可問的題目（尚未建立任何重要事項），直接跳過
+    onContinue();
+    return;
+  }
+
+  const task = available[Math.floor(Math.random() * available.length)];
+  appState.todayQuizQuestionsAsked.push(task.taskId);
+  appState.currentQuizTask = task;
+  appState.quizUsedHint = false;
+  appState.quizStartTime = Date.now();
+
+  document.getElementById("quiz-title").textContent = t("quizPromptTitle");
+  document.getElementById("quiz-question").textContent = task.question;
+  document.getElementById("quiz-answer-input").value = "";
+  document.getElementById("quiz-feedback").classList.add("hidden");
+  document.getElementById("quiz-slow-reminder").classList.add("hidden");
+  document.getElementById("btn-quiz-hint").classList.remove("hidden");
+  document.getElementById("btn-quiz-hint").textContent = t("quizShowHint");
+  document.getElementById("btn-quiz-submit").textContent = t("quizSubmit");
+  document.getElementById("btn-quiz-skip").textContent = t("quizSkip");
+
+  // 秒數過長提示（15秒沒有作答顯示提示文字）
+  if (appState.quizSlowTimer) clearTimeout(appState.quizSlowTimer);
+  appState.quizSlowTimer = setTimeout(() => {
+    document.getElementById("quiz-slow-reminder").textContent = t("quizSlowReminder");
+    document.getElementById("quiz-slow-reminder").classList.remove("hidden");
+  }, 15000);
+
+  document.getElementById("btn-quiz-hint").onclick = () => {
+    appState.quizUsedHint = true;
+    document.getElementById("quiz-answer-input").value = task.hint || "";
+  };
+
+  document.getElementById("btn-quiz-submit").onclick = async () => {
+    const userAnswer = document.getElementById("quiz-answer-input").value.trim();
+    const isCorrect = userAnswer && task.answer && userAnswer.replace(/\s/g, "") === task.answer.replace(/\s/g, "");
+
+    if (appState.quizSlowTimer) clearTimeout(appState.quizSlowTimer);
+
+    const feedbackEl = document.getElementById("quiz-feedback");
+    feedbackEl.classList.remove("hidden");
+
+    if (isCorrect) {
+      feedbackEl.textContent = t("quizCorrect");
+      // 答對加分：自己答對+2，用提示答對+0
+      appState.todayBonusScore += appState.quizUsedHint ? 0 : 2;
+      setTimeout(() => onContinue(), 1200);
+    } else {
+      feedbackEl.textContent = t("quizWrong");
+      // 答錯不重複扣分，直接給提示按鈕保留，讓使用者可以再試一次或跳過
+    }
+  };
+
+  document.getElementById("btn-quiz-skip").onclick = () => {
+    if (appState.quizSlowTimer) clearTimeout(appState.quizSlowTimer);
+    onContinue();
+  };
+
+  showScreen("screen-quiz");
+}
+
+// ============================================
+// 支線任務：詢問是否新增重要記憶事項（少於5項才問）
+// ============================================
+async function maybeShowAddMemoScreen(onContinue) {
+  const allTasks = await getAllMemoryTasks();
+
+  if (allTasks.length >= 5) {
+    onContinue();
+    return;
+  }
+
+  document.getElementById("add-memo-title").textContent = t("askAddNewMemo");
+  document.getElementById("add-memo-question").placeholder = t("addMemoQuestionPlaceholder");
+  document.getElementById("add-memo-answer").placeholder = t("addMemoAnswerPlaceholder");
+  document.getElementById("add-memo-question").value = "";
+  document.getElementById("add-memo-answer").value = "";
+  document.getElementById("btn-save-new-memo").textContent = t("addMemoSave");
+  document.getElementById("btn-skip-new-memo").textContent = t("addMemoSkip");
+
+  document.getElementById("btn-save-new-memo").onclick = async () => {
+    const question = document.getElementById("add-memo-question").value.trim();
+    const answer = document.getElementById("add-memo-answer").value.trim();
+    if (question && answer) {
+      await addMemoryTask({ question, answer, hint: answer });
+    }
+    onContinue();
+  };
+
+  document.getElementById("btn-skip-new-memo").onclick = () => {
+    onContinue();
+  };
+
+  showScreen("screen-add-memo");
+}
+
+// ============================================
+// 每日結束後的隨機提示（順利完成5關且分數未退步才可能出現）
+// 機率50%，隨著照片數/記憶事項數增加而降低頻率
+// ============================================
+async function maybeShowRandomEndHint(onContinue) {
+  if (appState.isFirstDayOfPlay) {
+    onContinue();
+    return;
+  }
+
+  const hasFailedGrade = appState.todayLevelResults.some(r => r.grade === 1);
+  if (hasFailedGrade) {
+    onContinue();
+    return;
+  }
+
+  const todayScore = calculateDailyScore(appState.todayLevelResults);
+  const lastDate = await getMostRecentLogDate(getTodayDateString());
+  let prevScore = null;
+  if (lastDate) {
+    const prevLogs = await getGameLogsByDate(lastDate);
+    prevScore = prevLogs.length; // 簡化比較：用關卡數量做基準，避免重複計算grade
+  }
+  const scoreNotRegressed = prevScore === null || todayScore >= 0; // 已在endTodaySession做更嚴謹計算，這裡僅作為門檻
+
+  if (!scoreNotRegressed) {
+    onContinue();
+    return;
+  }
+
+  // 隨著照片數/記憶事項數增加，降低出現頻率
+  const allCards = (await getAllCards()).filter(c => !c.isFallback && c.imageCurrent);
+  const allTasks = await getAllMemoryTasks();
+  const totalItems = allCards.length + allTasks.length;
+
+  // 基礎機率50%，每多5個項目降低10%，最低10%
+  let probability = 0.5 - Math.floor(totalItems / 5) * 0.1;
+  probability = Math.max(probability, 0.1);
+
+  if (Math.random() > probability) {
+    onContinue();
+    return;
+  }
+
+  // 隨機選擇：新增照片 或 新增重要事項
+  const showPhotoHint = Math.random() < 0.5;
+
+  if (showPhotoHint) {
+    showCompleteOverlay(t("randomHintAddPhoto"), null, async () => {
+      onContinue();
+    });
+  } else {
+    if (allTasks.length >= 5) {
+      onContinue();
+      return;
+    }
+    await maybeShowAddMemoScreen(onContinue);
+  }
 }
 
 // ============================================

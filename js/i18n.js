@@ -25,6 +25,23 @@ const TRANSLATIONS = {
     memoryTaskPhonePlaceholder: "電話號碼",
     memoryTaskSave: "記下來",
 
+    quizPromptTitle: "小提醒時間",
+    quizCorrect: "答對了！太棒了",
+    quizWrong: "再想想看？",
+    quizShowHint: "給我提示",
+    quizSubmit: "確定",
+    quizSkip: "先跳過",
+    quizSlowReminder: "別著急，慢慢想",
+
+    askAddNewMemo: "要不要告訴我一件對您重要的事？",
+    addMemoQuestionPlaceholder: "想記住什麼事情？(例如：吃藥時間)",
+    addMemoAnswerPlaceholder: "答案/內容",
+    addMemoSave: "記下來",
+    addMemoSkip: "現在不用",
+
+    randomHintAddPhoto: "好久沒看到新照片了，要不要新增一張呢？",
+    randomHintAddMemo: "要不要告訴我一件對您重要的事？",
+
     giveUpButton: "放棄 / 休息一下",
     greatJobMessage: "您今天很棒囉！我們休息一下，明天再見！",
 
@@ -36,7 +53,8 @@ const TRANSLATIONS = {
     inviteShare: "邀請家人傳送他們的近況",
     inviteShareDesc: "點擊這裡傳送邀請，請家人錄一段問候影片喔！",
 
-    familyAlbum: "家人卡片蒐集冊",
+    familyAlbum: "家人相冊",
+    familyAlbumHint: "可以在這裡新增家人照片喔，越多照片越有趣！",
     importantMemos: "重要記憶事項",
     streakDays: "連續訓練天數",
     shareButton: "邀請家人",
@@ -81,6 +99,23 @@ const TRANSLATIONS = {
     memoryTaskPhonePlaceholder: "Phone Number",
     memoryTaskSave: "Remember This",
 
+    quizPromptTitle: "Quick Reminder",
+    quizCorrect: "That's right! Wonderful",
+    quizWrong: "Let's think again?",
+    quizShowHint: "Give me a hint",
+    quizSubmit: "Confirm",
+    quizSkip: "Skip for now",
+    quizSlowReminder: "Take your time",
+
+    askAddNewMemo: "Would you like to tell me something important?",
+    addMemoQuestionPlaceholder: "What should I remember? (e.g. medicine time)",
+    addMemoAnswerPlaceholder: "Answer/Content",
+    addMemoSave: "Remember This",
+    addMemoSkip: "Not Now",
+
+    randomHintAddPhoto: "It's been a while since a new photo — want to add one?",
+    randomHintAddMemo: "Would you like to tell me something important?",
+
     giveUpButton: "Take a Break",
     greatJobMessage: "You did great today! Let's rest now, see you tomorrow!",
 
@@ -93,6 +128,7 @@ const TRANSLATIONS = {
     inviteShareDesc: "Tap here to invite family to record a greeting video!",
 
     familyAlbum: "Family Album",
+    familyAlbumHint: "Add family photos here — the more, the merrier!",
     importantMemos: "Important Memories",
     streakDays: "Days in a Row",
     shareButton: "Invite Family",
@@ -137,6 +173,23 @@ const TRANSLATIONS = {
     memoryTaskPhonePlaceholder: "Número de Teléfono",
     memoryTaskSave: "Recordar Esto",
 
+    quizPromptTitle: "Recordatorio Rápido",
+    quizCorrect: "¡Correcto! Maravilloso",
+    quizWrong: "¿Pensemos otra vez?",
+    quizShowHint: "Dame una pista",
+    quizSubmit: "Confirmar",
+    quizSkip: "Omitir por ahora",
+    quizSlowReminder: "Tómese su tiempo",
+
+    askAddNewMemo: "¿Quiere contarme algo importante?",
+    addMemoQuestionPlaceholder: "¿Qué debo recordar? (ej. hora de medicina)",
+    addMemoAnswerPlaceholder: "Respuesta/Contenido",
+    addMemoSave: "Recordar Esto",
+    addMemoSkip: "Ahora No",
+
+    randomHintAddPhoto: "Hace tiempo que no hay fotos nuevas, ¿añadimos una?",
+    randomHintAddMemo: "¿Quiere contarme algo importante?",
+
     giveUpButton: "Tomar un Descanso",
     greatJobMessage: "¡Lo hizo muy bien hoy! Descansemos, ¡hasta mañana!",
 
@@ -149,6 +202,7 @@ const TRANSLATIONS = {
     inviteShareDesc: "¡Toque aquí para invitar a un familiar a grabar un saludo!",
 
     familyAlbum: "Álbum Familiar",
+    familyAlbumHint: "¡Añada fotos familiares aquí, cuantas más, mejor!",
     importantMemos: "Memorias Importantes",
     streakDays: "Días Consecutivos",
     shareButton: "Invitar Familia",

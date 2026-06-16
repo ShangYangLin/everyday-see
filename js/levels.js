@@ -8,6 +8,11 @@ const LEVEL_CONFIG = {
   3: { gridClass: "grid-2x3", type: "level_3" },
   4: { gridClass: "grid-2x3", type: "level_4" },
   5: { gridClass: "grid-3x3", type: "level_5" },
+  6: { gridClass: "grid-3x3", type: "level_6" },
+  7: { gridClass: "grid-3x4", type: "level_7", pairCount: 5, decoCount: 2 },
+  8: { gridClass: "grid-3x4", type: "level_8", pairCount: 6, decoCount: 0 },
+  9: { gridClass: "grid-4x4", type: "level_9", pairCount: 7, decoCount: 2 },
+  10: { gridClass: "grid-4x4", type: "level_10", pairCount: 8, decoCount: 0 },
 };
 
 function getLevelWeight(level) {
@@ -26,7 +31,10 @@ function getClickThresholds(totalCards) {
 }
 
 function getTimeLimit(level) {
-  return level >= 4 ? 120 : 90;
+  if (level >= 9) return 180;
+  if (level >= 7) return 150;
+  if (level >= 4) return 120;
+  return 90;
 }
 
 // ============================================
@@ -162,15 +170,90 @@ async function generateLevelDeck(level, availableCards) {
       break;
     }
 
+    // ──────────────────────────────────────
+    // 第6關：3x3(中間icon)，ABCD各1張(有兩張的擇一)，共4對
+    // ──────────────────────────────────────
+    case "level_6": {
+      let chosen = realCards.slice(0, 4);
+      while (chosen.length < 4) chosen.push(makeFallback(chosen.length));
+
+      chosen.forEach((card, i) => {
+        const hasTwo = card.imageCurrent && card.imagePast;
+        const photoType = hasTwo ? (Math.random() < 0.5 ? "current" : "past") : "current";
+        const key = `L6_p${i}`;
+        deck.push(makeEntry(card, photoType, key));
+        deck.push(makeEntry(card, photoType, key));
+      });
+
+      deck = shuffle(deck);
+      deck.splice(4, 0, makeDecoCard());
+      break;
+    }
+
+    // ──────────────────────────────────────
+    // 第7-10關：從「全部照片池」任選N對，再插入裝飾牌
+    // ──────────────────────────────────────
+    case "level_7":
+    case "level_8":
+    case "level_9":
+    case "level_10": {
+      const pool = buildPhotoPool(realCards);
+      const chosenPhotos = pickRandom(pool, config.pairCount);
+
+      // 萬一池子不夠大（極端情況），用fallback補滿
+      let fallbackIdx = 0;
+      while (chosenPhotos.length < config.pairCount) {
+        const fb = makeFallback(fallbackIdx);
+        chosenPhotos.push({ card: fb, photoType: "current", key: `extra_fb_${fallbackIdx}` });
+        fallbackIdx++;
+      }
+
+      chosenPhotos.forEach((entry, i) => {
+        const key = `${config.type}_p${i}`;
+        deck.push(makeEntry(entry.card, entry.photoType, key));
+        deck.push(makeEntry(entry.card, entry.photoType, key));
+      });
+
+      deck = shuffle(deck);
+
+      // 插入裝飾牌（隨機位置）
+      for (let d = 0; d < (config.decoCount || 0); d++) {
+        const insertPos = Math.floor(Math.random() * (deck.length + 1));
+        deck.splice(insertPos, 0, makeDecoCard());
+      }
+      break;
+    }
+
     default:
       throw new Error(`Unhandled level type: ${config.type}`);
   }
 
-  if (config.type !== "level_5") {
+  const typesAlreadyFinalized = ["level_5", "level_6", "level_7", "level_8", "level_9", "level_10"];
+  if (!typesAlreadyFinalized.includes(config.type)) {
     deck = shuffle(deck);
   }
 
   return { deck, config };
+}
+
+// 建立「全部照片池」：每張真實照片(current+past都算)各算一筆，用於第7關以後的任選玩法
+function buildPhotoPool(realCards) {
+  const pool = [];
+  realCards.forEach(card => {
+    if (card.imageCurrent) pool.push({ card, photoType: "current", key: `${card.cardId}_current` });
+    if (card.imagePast)    pool.push({ card, photoType: "past",    key: `${card.cardId}_past` });
+  });
+  return pool;
+}
+
+// 建立一張裝飾牌（顯示App icon，不參與翻牌配對）
+function makeDecoCard() {
+  return {
+    pairKey: `DECO_${Math.random().toString(36).slice(2)}`,
+    cardId: "deco",
+    displayType: "deco",
+    isDecorative: true
+  };
 }
 
 function makeEntry(card, photoType, pairKey) {

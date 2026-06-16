@@ -20,7 +20,7 @@ const SCORING_CONFIG = {
   dailyLevelCount: 5,
 
   // 起始關卡指標上限（保留給當天推進空間）
-  maxBaseLevel: 5,
+  maxBaseLevel: 10,
 
   // 晉級判定：今天分數 >= 昨天分數 * 此倍率，則晉級
   promoteMultiplier: 1.1,
