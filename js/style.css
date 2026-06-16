@@ -1,0 +1,360 @@
+/* ============================================
+   基礎樣式 - 高齡友善設計
+   大字體、大按鈕、防止意外縮放
+   ============================================ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  /* 防止雙擊放大造成長輩慌張 */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei", sans-serif;
+  background-color: #FFF8F0;
+  color: #4A3F35;
+  font-size: 20px;
+  line-height: 1.6;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.screen {
+  width: 100%;
+}
+
+/* 主畫面容器 */
+.app-container {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+/* 標題文字 */
+h1 {
+  font-size: 36px;
+  font-weight: bold;
+  color: #E8A87C;
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+h2 {
+  font-size: 28px;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+p {
+  font-size: 22px;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+/* 大按鈕 - 高齡友善 */
+.btn {
+  display: block;
+  width: 100%;
+  max-width: 360px;
+  padding: 20px 32px;
+  margin: 12px auto;
+  font-size: 24px;
+  font-weight: bold;
+  border: none;
+  border-radius: 16px;
+  background-color: #E8A87C;
+  color: #fff;
+  cursor: pointer;
+  text-align: center;
+  transition: transform 0.1s;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn-secondary {
+  background-color: #B8D4C8;
+}
+
+.btn-skip {
+  background-color: transparent;
+  color: #999;
+  font-size: 20px;
+  text-decoration: underline;
+}
+
+/* 紅色放棄按鈕 */
+/* ============================================
+   管理照片畫面
+   ============================================ */
+.person-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background-color: #fff;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.person-row .person-photos {
+  display: flex;
+  gap: 8px;
+}
+
+.person-row .person-photo {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  object-fit: cover;
+  background-color: #E8A87C;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  cursor: pointer;
+  border: 2px dashed transparent;
+}
+
+.person-row .person-photo.empty {
+  border: 2px dashed #D9C9B8;
+  color: #D9C9B8;
+}
+
+.person-row .person-info {
+  flex: 1;
+}
+
+.person-row .person-info input {
+  font-size: 18px;
+  border: 1px solid #D9C9B8;
+  border-radius: 8px;
+  padding: 6px 10px;
+  width: 100%;
+}
+
+/* ============================================
+   開發用 Debug 資訊條 (上線前隱藏)
+   ============================================ */
+.debug-bar {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto 12px;
+  padding: 10px 16px;
+  background-color: #4A3F35;
+  color: #FFE8D6;
+  font-size: 14px;
+  font-family: monospace;
+  border-radius: 8px;
+  text-align: left;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.debug-bar.hidden {
+  display: none;
+}
+
+.btn-giveup {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background-color: #E07A5F;
+  color: #fff;
+  font-size: 22px;
+  font-weight: bold;
+  padding: 16px 24px;
+  border-radius: 50px;
+  border: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  z-index: 100;
+  display: none; /* 預設隱藏，由 JS 控制顯示 */
+}
+
+/* 文字輸入框 */
+.input-field {
+  width: 100%;
+  max-width: 360px;
+  padding: 16px;
+  font-size: 22px;
+  border: 2px solid #D9C9B8;
+  border-radius: 12px;
+  margin: 12px auto;
+  display: block;
+  text-align: center;
+}
+
+/* 上傳照片區塊 */
+.upload-area {
+  width: 200px;
+  height: 200px;
+  border: 3px dashed #D9C9B8;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 24px auto;
+  overflow: hidden;
+  background-color: #fff;
+}
+
+.upload-area img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.upload-area .upload-icon {
+  font-size: 48px;
+  color: #D9C9B8;
+}
+
+/* ============================================
+   遊戲卡牌區域
+   ============================================ */
+
+#game-container {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+/* 不同關卡的網格佈局 */
+.grid-2x2 { grid-template-columns: repeat(2, 1fr); }
+.grid-2x3 { grid-template-columns: repeat(2, 1fr); }
+.grid-3x3 { grid-template-columns: repeat(3, 1fr); }
+.grid-3x2 { grid-template-columns: repeat(3, 1fr); }
+.grid-4x2 { grid-template-columns: repeat(4, 1fr); }
+.grid-5x2 { grid-template-columns: repeat(5, 1fr); }
+.grid-4x3 { grid-template-columns: repeat(4, 1fr); }
+.grid-4x4 { grid-template-columns: repeat(4, 1fr); }
+
+.card {
+  aspect-ratio: 1;
+  border-radius: 12px;
+  background-size: cover;
+  background-position: center;
+  background-color: #E8A87C;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: transform 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: bold;
+  color: #fff;
+  text-align: center;
+  padding: 4px;
+}
+
+.card:active {
+  transform: scale(0.95);
+}
+
+.card.matched {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.card.card-decorative {
+  opacity: 0.85;
+  box-shadow: none;
+}
+
+/* 文字卡（異質配對用） */
+.card.text-card {
+  background-color: #B8D4C8;
+}
+
+/* ============================================
+   過關/全螢幕訊息層
+   ============================================ */
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 248, 240, 0.98);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 24px;
+  text-align: center;
+}
+
+.overlay.hidden {
+  display: none;
+}
+
+.overlay video,
+.overlay img {
+  max-width: 90%;
+  max-height: 50vh;
+  border-radius: 16px;
+  margin-bottom: 24px;
+}
+
+/* ============================================
+   側邊欄/儀表板
+   ============================================ */
+
+.dashboard {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.dashboard-item {
+  background-color: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.dashboard-item h3 {
+  font-size: 22px;
+  margin-bottom: 8px;
+  color: #E8A87C;
+}
+
+.family-album-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.family-album-grid img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 8px;
+}

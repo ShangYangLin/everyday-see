@@ -85,48 +85,27 @@ function bindWelcomeEvents() {
 }
 
 // ============================================
-// 首刷引導流程 (Step 3-13)
+// 首刷引導流程
+// ============================================
+// 第1關前：A1, B1
+// 第2關前：A或B隨機選一人補第2張
+// 第3關前：上傳新家人C1
+// 第4關前：不問
+// 第5關前：從只有1張的家人(B或C)隨機選一人補第2張
 // ============================================
 
-// 上傳順序設定：先收集2位家人各1張照片，再進入第1關
-const UPLOAD_SEQUENCE = [
-  { cardId: "card_slot_01", promptKey: "askUploadFirst", isSecondPhoto: false },
-  { cardId: "card_slot_02", promptKey: "askUploadAnother", isSecondPhoto: false }
-];
-
-// Step 3: 開始上傳流程（第一張照片）
 function startOnboardingStep3() {
-  appState.onboardingStep = 3;
-  appState.uploadSequenceIndex = 0;
-  showUploadStep();
+  appState.onboardingStep = "upload_A1";
+  appState.level2TargetCardId = null;
+  appState.level5TargetCardId = null;
+  showSinglePhotoUpload("card_slot_01", "askUploadFirst", false);
 }
 
-// 依照 UPLOAD_SEQUENCE 顯示對應的上傳畫面
-async function showUploadStep() {
-  const idx = appState.uploadSequenceIndex;
-  const step = UPLOAD_SEQUENCE[idx];
-
-  appState.pendingRelationCardId = step.cardId;
-  appState.pendingIsSecondPhoto = step.isSecondPhoto;
-
-  let promptText;
-  if (step.promptKey === "askUploadSecondPhoto") {
-    const card = await getCard(step.cardId);
-    const name = card ? card.relation : "家人";
-    promptText = t("askUploadSecondPhoto", { name });
-  } else {
-    promptText = t(step.promptKey);
-  }
-
+function showSinglePhotoUpload(cardId, promptKey, isSecondPhoto, promptParams = {}) {
+  appState.pendingRelationCardId = cardId;
+  appState.pendingIsSecondPhoto = isSecondPhoto;
+  const promptText = t(promptKey, promptParams);
   setupUploadScreen(promptText);
-
-  // 第二張照片時不需要再填關係名稱（沿用第一張的名字）
-  if (step.isSecondPhoto) {
-    document.getElementById("who-is-this-block").classList.add("force-hidden-name");
-  } else {
-    document.getElementById("who-is-this-block").classList.remove("force-hidden-name");
-  }
-
   showScreen("screen-upload");
 }
 
@@ -141,38 +120,28 @@ function setupUploadScreen(promptText) {
   const fileInput = document.getElementById("file-input");
   fileInput.value = "";
 
-  // 重新綁定事件（避免重複綁定）
   const newUploadArea = uploadArea.cloneNode(true);
   uploadArea.parentNode.replaceChild(newUploadArea, uploadArea);
   newUploadArea.addEventListener("click", () => fileInput.click());
 
   fileInput.onchange = handlePhotoUpload;
-
   document.getElementById("btn-skip-upload").onclick = handleSkipUpload;
 }
 
-// 處理照片上傳
 async function handlePhotoUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
 
-  // 顯示處理中狀態，避免使用者誤以為卡住
   const areaEl = document.querySelector("#screen-upload .upload-area");
   areaEl.innerHTML = '<span class="upload-icon">⏳</span>';
 
   const base64 = await fileToBlob(file);
-
-  // 顯示預覽
   areaEl.innerHTML = `<img src="${base64}" alt="preview">`;
-
-  // 暫存這次上傳的照片
   appState.pendingPhotoBlob = base64;
 
   if (appState.pendingIsSecondPhoto) {
-    // 第二張照片：不需要再問名字，直接儲存
     await saveSecondPhoto();
   } else {
-    // 第一張照片：顯示「這是誰？」輸入框
     document.getElementById("who-is-this-block").classList.remove("hidden");
     document.getElementById("relation-input").value = "";
     document.getElementById("relation-input").focus();
@@ -180,16 +149,13 @@ async function handlePhotoUpload(event) {
   }
 }
 
-// 確認關係名稱，存入 IndexedDB（用於第一張照片）
 async function handleConfirmRelation() {
-  const relationInput = document.getElementById("relation-input");
-  const relationName = relationInput.value.trim();
+  const relationName = document.getElementById("relation-input").value.trim();
   if (!relationName) return;
 
   const cardId = appState.pendingRelationCardId;
-
   const card = {
-    cardId: cardId,
+    cardId,
     relation: relationName,
     imageCurrent: appState.pendingPhotoBlob,
     imagePast: null,
@@ -199,108 +165,135 @@ async function handleConfirmRelation() {
 
   await saveCard(card);
   appState.pendingPhotoBlob = null;
-
-  await advanceUploadSequence();
+  await proceedOnboarding();
 }
 
-// 儲存第二張照片（沿用既有的 relation 名稱）
 async function saveSecondPhoto() {
   const cardId = appState.pendingRelationCardId;
   let card = await getCard(cardId);
-
   if (!card) {
-    // 防呆：理論上不該發生，但若發生則建立一個暫時卡片
     card = { cardId, relation: "家人", imageCurrent: appState.pendingPhotoBlob, imagePast: null, hidden: false };
   } else {
     card.imagePast = appState.pendingPhotoBlob;
   }
-
   await saveCard(card);
   appState.pendingPhotoBlob = null;
-
-  await advanceUploadSequence();
+  await proceedOnboarding();
 }
 
-// 跳過上傳：使用備用人物補位
 async function handleSkipUpload() {
-  const cardId = appState.pendingRelationCardId;
-
   if (appState.pendingIsSecondPhoto) {
-    // 跳過第二張照片：保留第一張即可，不用補fallback
-    await advanceUploadSequence();
+    // 跳過第二張照片，直接進下一步
+    appState.pendingPhotoBlob = null;
+    await proceedOnboarding();
     return;
   }
 
+  // 跳過新家人：用 fallback 補位
+  const cardId = appState.pendingRelationCardId;
   const fallbackIndex = (parseInt(cardId.replace(/\D/g, "")) - 1) % FALLBACK_PERSONS.length;
   const fallback = FALLBACK_PERSONS[fallbackIndex];
-
-  const card = {
-    cardId: cardId,
+  await saveCard({
+    cardId,
     relation: fallback.relation,
     imageCurrent: null,
     imagePast: null,
     audioHint: null,
     hidden: true,
     isFallback: true,
-    fallbackEmoji: fallback.emoji,
-    fallbackColor: fallback.color
-  };
-
-  await saveCard(card);
-  await advanceUploadSequence();
+    fallbackImage: fallback.image
+  });
+  await proceedOnboarding();
 }
 
-// 推進到上傳序列的下一步，或進入第一關
-async function advanceUploadSequence() {
-  appState.uploadSequenceIndex++;
-
-  if (appState.uploadSequenceIndex < UPLOAD_SEQUENCE.length) {
-    await showUploadStep();
-  } else {
-    // 4張照片收集完畢，進入第1關
-    appState.onboardingStep = 7;
-    await playLevel(1, { onComplete: () => proceedOnboarding() });
-  }
-}
-
-// 引導流程的步驟控制器（第1關之後的流程）
+// ============================================
+// 引導流程狀態機
+// ============================================
 async function proceedOnboarding() {
   const step = appState.onboardingStep;
 
   switch (step) {
-    case 7:
-      // 第2關
-      appState.onboardingStep = 8;
+
+    // 上傳 B1 → 進第1關
+    case "upload_A1":
+      appState.onboardingStep = "upload_B1";
+      showSinglePhotoUpload("card_slot_02", "askUploadAnother", false);
+      return;
+
+    // 進第1關
+    case "upload_B1":
+      appState.onboardingStep = "before_level_2";
+      await playLevel(1, { onComplete: () => proceedOnboarding() });
+      return;
+
+    // 第1關完成 → 隨機選A或B補第2張照片
+    case "before_level_2": {
+      const cards = (await getAllCards()).filter(c => !c.isFallback && c.imageCurrent);
+      const target = cards[Math.floor(Math.random() * cards.length)];
+      appState.level2TargetCardId = target ? target.cardId : "card_slot_01";
+      const targetCard = target || { relation: "家人" };
+      appState.onboardingStep = "upload_second_for_level2";
+      showSinglePhotoUpload(appState.level2TargetCardId, "askUploadSecondPhoto", true, { name: targetCard.relation });
+      return;
+    }
+
+    // 第2張照片上傳完（或跳過）→ 進第2關
+    case "upload_second_for_level2":
+      appState.onboardingStep = "before_level_3";
       await playLevel(2, { onComplete: () => proceedOnboarding() });
       return;
 
-    case 8:
-      // 第3關
-      appState.onboardingStep = 9;
+    // 第2關完成 → 問新家人C
+    case "before_level_3":
+      appState.onboardingStep = "upload_C1";
+      showSinglePhotoUpload("card_slot_03", "askUploadAnother", false);
+      return;
+
+    // C1上傳完（或跳過）→ 進第3關
+    case "upload_C1":
+      appState.onboardingStep = "before_level_4";
       await playLevel(3, { onComplete: () => proceedOnboarding() });
       return;
 
-    case 9:
-      // 第4關
-      appState.onboardingStep = 10;
+    // 第3關完成 → 不問，直接進第4關
+    case "before_level_4":
+      appState.onboardingStep = "before_level_5";
       await playLevel(4, { onComplete: () => proceedOnboarding() });
       return;
 
-    case 10:
-      // 第5關
-      appState.onboardingStep = 11;
+    // 第4關完成 → 從只有1張照片的家人(B或C)隨機選一人補第2張
+    case "before_level_5": {
+      const allCards = (await getAllCards()).filter(c => !c.isFallback && c.imageCurrent);
+      // 只有1張照片的家人（沒有 imagePast）
+      const singlePhotoCards = allCards.filter(c => !c.imagePast);
+      if (singlePhotoCards.length > 0) {
+        const target = singlePhotoCards[Math.floor(Math.random() * singlePhotoCards.length)];
+        appState.level5TargetCardId = target.cardId;
+        appState.onboardingStep = "upload_second_for_level5";
+        showSinglePhotoUpload(target.cardId, "askUploadSecondPhoto", true, { name: target.relation });
+      } else {
+        // 所有人都有兩張照片，直接進第5關
+        appState.onboardingStep = "before_memory_task";
+        await playLevel(5, { onComplete: () => proceedOnboarding() });
+      }
+      return;
+    }
+
+    // 第5關第2張照片上傳完（或跳過）→ 進第5關
+    case "upload_second_for_level5":
+      appState.onboardingStep = "before_memory_task";
       await playLevel(5, { onComplete: () => proceedOnboarding() });
       return;
 
-    case 11:
-      // 記憶任務解鎖
-      appState.onboardingStep = 12;
+    // 第5關完成 → 記憶任務
+    case "before_memory_task":
+      appState.onboardingStep = "memory_task_done";
       showMemoryTaskScreen();
       return;
 
-    case 12:
-      // 第一天結束，播放過關動畫，進入主頁
-      appState.onboardingStep = 13;
+    // 記憶任務完成 → 結束引導，進主頁
+    case "memory_task_done":
+      appState.onboardingStep = "done";
       await setAppState("onboarding_done", true);
       await setAppState("current_base_level", 1);
       await setAppState("last_play_date", null);
@@ -315,7 +308,7 @@ async function proceedOnboarding() {
 }
 
 // ============================================
-// Step 12: 記憶任務畫面
+// Step: 記憶任務畫面
 // ============================================
 function showMemoryTaskScreen() {
   document.getElementById("memory-task-title").textContent = t("memoryTaskTitle");
@@ -394,6 +387,17 @@ function renderGameBoard() {
     cardEl.dataset.index = index;
     cardEl.dataset.pairKey = cardData.pairKey;
 
+    if (cardData.isDecorative) {
+      // 裝飾牌：永遠正面朝上顯示App icon，不可點擊，不參與配對
+      cardEl.classList.add("card-decorative");
+      cardEl.style.backgroundImage = "url(icons/icon-512.png)";
+      cardEl.style.backgroundSize = "cover";
+      cardEl.style.backgroundPosition = "center";
+      cardEl.style.cursor = "default";
+      container.appendChild(cardEl);
+      return;
+    }
+
     // 背面樣式（預設顯示）
     applyCardBackStyle(cardEl);
 
@@ -421,10 +425,12 @@ function applyCardFrontStyle(cardEl, cardData) {
     cardEl.style.backgroundColor = "#B8D4C8";
     cardEl.style.backgroundImage = "";
   } else if (cardData.isFallback) {
-    // 備用人物：顯示 emoji
-    cardEl.style.backgroundColor = cardData.fallbackColor || "#E8A87C";
-    cardEl.style.backgroundImage = "";
-    cardEl.textContent = cardData.fallbackEmoji || "👤";
+    // 備用人物：顯示實際插畫圖片
+    cardEl.style.backgroundImage = cardData.fallbackImage ? `url(${cardData.fallbackImage})` : "";
+    cardEl.style.backgroundSize = "cover";
+    cardEl.style.backgroundPosition = "center";
+    cardEl.style.backgroundColor = cardData.fallbackImage ? "" : "#E8A87C";
+    cardEl.textContent = cardData.fallbackImage ? "" : "👤";
     cardEl.style.fontSize = "48px";
   } else if (cardData.imageBlob) {
     // 真實照片
@@ -495,10 +501,11 @@ function handleCardClick(cardEl, cardData, index) {
 // 檢查關卡是否完成
 async function checkLevelComplete() {
   const totalMatched = document.querySelectorAll("#game-container .card.matched").length;
-  if (totalMatched < gameState.deck.length) return;
+  const playableCardCount = gameState.deck.filter(c => !c.isDecorative).length;
+  if (totalMatched < playableCardCount) return;
 
   const durationSeconds = (Date.now() - gameState.startTime) / 1000;
-  const totalCards = gameState.deck.length;
+  const totalCards = playableCardCount;
 
   const gradeResult = evaluateLevelGrade({
     totalCards,
@@ -552,11 +559,12 @@ function updateGiveUpButtonVisibility() {
   if (!gameState.config) return;
 
   const currentDuration = gameState.startTime ? (Date.now() - gameState.startTime) / 1000 : 0;
+  const playableCount = gameState.deck ? gameState.deck.filter(c => !c.isDecorative).length : 0;
   const shouldShow = shouldShowGiveUpButton(
     appState.currentLevel,
     currentDuration,
     gameState.clickCount,
-    gameState.deck.length,
+    playableCount,
     gameState.lastClickTime
   );
 
@@ -588,7 +596,7 @@ async function updateDebugBar() {
   bar.classList.remove("hidden");
 
   const baseLevel = await getAppState("current_base_level", 1);
-  const totalCards = gameState.deck ? gameState.deck.length : 0;
+  const totalCards = gameState.deck ? gameState.deck.filter(c => !c.isDecorative).length : 0;
   const durationSeconds = gameState.startTime
     ? Math.round((Date.now() - gameState.startTime) / 1000)
     : 0;
@@ -946,7 +954,7 @@ async function startTodaySession() {
   const baseLevel = await getAppState("current_base_level", 1);
   const levelsToPlay = [];
   for (let i = 0; i < SCORING_CONFIG.dailyLevelCount; i++) {
-    const lvl = Math.min(baseLevel + i, 10);
+    const lvl = Math.min(baseLevel + i, 5);
     levelsToPlay.push(lvl);
   }
 
