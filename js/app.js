@@ -326,7 +326,7 @@ async function proceedOnboarding() {
     case "onboarding_complete":
       appState.onboardingStep = "done";
       await setAppState("onboarding_done", true);
-      await setAppState("current_base_level", 1);
+      await setAppState("current_base_level", 2);
       // 記成「今天已經玩過」（而不是null），這樣下一次玩才會被正確判定為「不是第一天」，
       // 正式啟用計分、滾動調整關卡、支線任務（小提醒問答/新增重要事項）
       await setAppState("last_play_date", getTodayDateString());
@@ -576,7 +576,7 @@ async function checkLevelComplete() {
     showCompleteOverlay(t("levelComplete"), null, () => {
       if (gameState.onComplete) gameState.onComplete();
     });
-  }, 1200);
+  }, 600);
 }
 
 // ============================================

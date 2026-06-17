@@ -256,8 +256,8 @@ p {
    避免關卡越後面、卡片視覺上越來越小的問題 */
 #game-container.grid-3x4,
 #game-container.grid-4x4 {
-  gap: 8px;
-  padding: 10px;
+  gap: 6px;
+  padding: 4px;
 }
 
 .card {
