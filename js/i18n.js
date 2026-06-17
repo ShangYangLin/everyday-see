@@ -29,6 +29,8 @@ const TRANSLATIONS = {
     quizCorrect: "答對了！太棒了",
     quizWrong: "再想想看？",
     quizShowHint: "給我提示",
+    quizHintPrefix: "提示：",
+    quizContactPhoneQuestion: "{name}的電話是？",
     quizSubmit: "確定",
     quizSkip: "先跳過",
     quizSlowReminder: "別著急，慢慢想",
@@ -103,6 +105,8 @@ const TRANSLATIONS = {
     quizCorrect: "That's right! Wonderful",
     quizWrong: "Let's think again?",
     quizShowHint: "Give me a hint",
+    quizHintPrefix: "Hint: ",
+    quizContactPhoneQuestion: "What is {name}'s phone number?",
     quizSubmit: "Confirm",
     quizSkip: "Skip for now",
     quizSlowReminder: "Take your time",
@@ -177,6 +181,8 @@ const TRANSLATIONS = {
     quizCorrect: "¡Correcto! Maravilloso",
     quizWrong: "¿Pensemos otra vez?",
     quizShowHint: "Dame una pista",
+    quizHintPrefix: "Pista: ",
+    quizContactPhoneQuestion: "¿Cuál es el número de teléfono de {name}?",
     quizSubmit: "Confirmar",
     quizSkip: "Omitir por ahora",
     quizSlowReminder: "Tómese su tiempo",
@@ -251,6 +257,8 @@ const TRANSLATIONS = {
     quizCorrect: "正解です！すばらしい",
     quizWrong: "もう一度考えてみましょう",
     quizShowHint: "ヒントをください",
+    quizHintPrefix: "ヒント：",
+    quizContactPhoneQuestion: "{name}の電話番号は？",
     quizSubmit: "確定",
     quizSkip: "あとでやる",
     quizSlowReminder: "ゆっくり考えてくださいね",
@@ -310,8 +318,20 @@ function detectLocale() {
   return "en";
 }
 
-const LOCALE = detectLocale();
-const T = TRANSLATIONS[LOCALE];
+let currentLocale = detectLocale();
+let T = TRANSLATIONS[currentLocale];
+
+// 測試/除錯用：執行時切換語系，不用重新整理頁面
+function setLocale(locale) {
+  if (!TRANSLATIONS[locale]) return false;
+  currentLocale = locale;
+  T = TRANSLATIONS[locale];
+  return true;
+}
+
+function getLocale() {
+  return currentLocale;
+}
 
 // 簡單的字串模板替換，例如 t("askUploadSecondPhoto", {name: "兒子"})
 function t(key, params = {}) {

@@ -431,3 +431,11 @@ p {
   font-size: 18px;
   color: #E07A5F;
 }
+
+.quiz-hint-text {
+  font-size: 18px;
+  color: #6F8FA8;
+  background-color: #F3F7FA;
+  border-radius: 8px;
+  padding: 8px 12px;
+}

@@ -358,7 +358,7 @@ function showMemoryTaskScreen() {
 
     if (name && phone) {
       await addMemoryTask({
-        question: t("memoryTaskQuestion"),
+        question: t("quizContactPhoneQuestion", { name }),
         answer: phone,
         hint: name
       });
@@ -420,13 +420,11 @@ function renderGameBoard() {
     cardEl.dataset.pairKey = cardData.pairKey;
 
     if (cardData.isDecorative) {
-      // 裝飾牌：永遠正面朝上顯示一個裝飾符號，不可點擊，不參與配對
-      // 改用純文字符號呈現，不依賴外部圖檔（若圖檔路徑錯誤或遺失，原本會整張空白）
+      // 裝飾牌：永遠正面朝上顯示App icon，不可點擊，不參與配對
       cardEl.classList.add("card-decorative");
-      cardEl.style.backgroundImage = "";
-      cardEl.style.backgroundColor = "#F3D9B1";
-      cardEl.textContent = "🏡";
-      cardEl.style.fontSize = "36px";
+      cardEl.style.backgroundImage = "url(icons/icon-512.png)";
+      cardEl.style.backgroundSize = "cover";
+      cardEl.style.backgroundPosition = "center";
       cardEl.style.cursor = "default";
       container.appendChild(cardEl);
       return;
@@ -808,7 +806,8 @@ function getTodayDateString() {
 // 文字框則是另一個浮動氣泡，點擊畫面任意處就會消失
 // ============================================
 function showAlbumSpotlightHint(message) {
-  const target = document.getElementById("family-album-grid");
+  const grid = document.getElementById("family-album-grid");
+  const target = grid ? (grid.closest(".dashboard-item") || grid) : null;
   const spotlight = document.getElementById("album-spotlight");
   const tooltip = document.getElementById("album-tooltip");
   const tooltipText = document.getElementById("album-tooltip-text");
@@ -865,9 +864,8 @@ async function showDashboard() {
   });
 
   // 相冊還是空的時候，用框住整個相冊的提示引導使用者新增第一張照片
-  if (visibleCards.length === 0) {
-    showAlbumSpotlightHint(t("familyAlbumHint"));
-  }
+  // (實際呼叫移到最後面的 showScreen 之後，等畫面真的可見了才量位置)
+  const shouldShowAlbumHint = visibleCards.length === 0;
 
   // 重要記憶事項
   const tasks = await getAllMemoryTasks();
@@ -891,6 +889,12 @@ async function showDashboard() {
   }
 
   showScreen("screen-dashboard");
+
+  // 一定要等畫面真的顯示出來(從 display:none 變成可見)之後才能量到正確的位置，
+  // 用 requestAnimationFrame 確保瀏覽器已經完成這次的版面配置(layout)
+  if (shouldShowAlbumHint) {
+    requestAnimationFrame(() => showAlbumSpotlightHint(t("familyAlbumHint")));
+  }
 }
 
 // ============================================
@@ -911,18 +915,44 @@ async function renderTestPanel() {
   const onboardingDone = await getAppState("onboarding_done", false);
   const today = getTodayDateString();
 
+  // 昨天(最近一次不是今天)的分數，方便確認晉降級的比較基準對不對
+  const prevDate = await getMostRecentLogDate(today);
+  let prevScoreText = "（無紀錄）";
+  if (prevDate) {
+    const prevLogs = await getGameLogsByDate(prevDate);
+    const prevResults = prevLogs.map(log => ({ level: log.level, grade: typeof log.grade === "number" ? log.grade : 1 }));
+    const prevScore = calculateDailyScore(prevResults);
+    prevScoreText = `${prevScore.toFixed(1)} (${prevDate})`;
+  }
+
   panel.innerHTML = `
     <div style="margin-bottom:8px;">
       🧪 測試模式　今天(虛擬): ${today}<br>
       上次遊玩日期: ${lastPlayDate || "（無）"}　起始關卡指標: ${baseLevel}<br>
-      首刷引導完成: ${onboardingDone ? "是" : "否"}
+      首刷引導完成: ${onboardingDone ? "是" : "否"}　昨天得分: ${prevScoreText}
     </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
       <button id="test-advance-1" style="flex:1;min-width:90px;padding:10px;border:none;border-radius:8px;background:#E8A87C;color:#2C2C2A;font-weight:bold;">+1 天</button>
       <button id="test-advance-5" style="flex:1;min-width:90px;padding:10px;border:none;border-radius:8px;background:#E8A87C;color:#2C2C2A;font-weight:bold;">+5 天</button>
       <button id="test-reset" style="flex:1;min-width:90px;padding:10px;border:none;border-radius:8px;background:#E07A5F;color:#fff;font-weight:bold;">重置全部資料</button>
     </div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+      <span>手動設定起始關卡(1-10):</span>
+      <input id="test-set-level-input" type="number" min="1" max="10" value="${baseLevel}" style="width:60px;padding:6px;border-radius:6px;border:none;color:#2C2C2A;">
+      <button id="test-set-level-btn" style="flex:1;padding:8px;border:none;border-radius:8px;background:#B8D4C8;color:#2C2C2A;font-weight:bold;">套用</button>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <span>測試語言:</span>
+      <select id="test-locale-select" style="flex:1;padding:6px;border-radius:6px;color:#2C2C2A;">
+        <option value="zh">中文</option>
+        <option value="en">English</option>
+        <option value="es">Español</option>
+        <option value="ja">日本語</option>
+      </select>
+    </div>
   `;
+
+  document.getElementById("test-locale-select").value = getLocale();
 
   document.getElementById("test-advance-1").onclick = async () => {
     testAdvanceDay(1);
@@ -937,6 +967,18 @@ async function renderTestPanel() {
       await testResetAllData();
       location.reload();
     }
+  };
+  document.getElementById("test-set-level-btn").onclick = async () => {
+    let value = parseInt(document.getElementById("test-set-level-input").value, 10);
+    if (isNaN(value)) return;
+    value = Math.max(1, Math.min(10, value));
+    await setAppState("current_base_level", value);
+    await showDashboard();
+  };
+  document.getElementById("test-locale-select").onchange = async (e) => {
+    setLocale(e.target.value);
+    applyTranslations();
+    await showDashboard();
   };
 }
 
@@ -1185,6 +1227,7 @@ async function showQuizScreen(onContinue) {
   document.getElementById("quiz-answer-input").value = "";
   document.getElementById("quiz-feedback").classList.add("hidden");
   document.getElementById("quiz-slow-reminder").classList.add("hidden");
+  document.getElementById("quiz-hint-text").classList.add("hidden");
   document.getElementById("btn-quiz-hint").classList.remove("hidden");
   document.getElementById("btn-quiz-hint").textContent = t("quizShowHint");
   document.getElementById("btn-quiz-submit").textContent = t("quizSubmit");
@@ -1199,7 +1242,9 @@ async function showQuizScreen(onContinue) {
 
   document.getElementById("btn-quiz-hint").onclick = () => {
     appState.quizUsedHint = true;
-    document.getElementById("quiz-answer-input").value = task.hint || "";
+    const hintEl = document.getElementById("quiz-hint-text");
+    hintEl.textContent = `${t("quizHintPrefix")}${task.hint || ""}`;
+    hintEl.classList.remove("hidden");
   };
 
   document.getElementById("btn-quiz-submit").onclick = async () => {
