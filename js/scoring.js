@@ -19,17 +19,14 @@ const SCORING_CONFIG = {
   // 每日固定關卡數
   dailyLevelCount: 5,
 
-  // 起始關卡指標上限（保留給當天推進空間）
-  maxBaseLevel: 10,
+  // 起始關卡指標上限：到了這個關卡指標之後就不再往上爬，改成看分數有沒有持續成長
+  maxBaseLevel: 6,
 
-  // 晉級判定：今天分數 >= 昨天分數 * 此倍率，則晉級
+  // 晉級判定（已到頂時使用）：今天分數 >= 昨天分數 * 此倍率，視為「過」
   promoteMultiplier: 1.1,
 
-  // 高分晉級的絕對門檻（不論昨天分數，超過此值直接晉級）
-  promoteAbsoluteThreshold: 25,
-
-  // 降級判定：今天分數 < 昨天分數 * 此倍率，則降級
-  demoteMultiplier: 0.85,
+  // 連續幾次「不過」才會真的降一關（沒有累積到這個次數，只是維持原關卡，不會立刻降）
+  stallLimitBeforeDemote: 2,
 
   // 連續兩次觸發放棄按鈕，當天遊戲提前結束
   maxGiveUpPerDay: 2
@@ -101,34 +98,53 @@ function calculateDailyScore(levelResults) {
 }
 
 // ============================================
-// 隔日起始關卡判定邏輯
+// 隔日起始關卡判定邏輯（V2，依你確認的規則重寫）
+//
 // todayScore: 今天總分
-// prevScore: 昨天總分 (若無紀錄則為 null，視為第一天)
+// prevScore: 昨天總分 (若無紀錄則為 null)
 // currentBaseLevel: 今天的起始關卡指標
 // hasFailedGrade: 今天是否有任何一關是 Grade 1
+// stallCount: 目前累積的「不過」次數（需要持久化保存，跨天延續）
+//
+// 規則：
+// 1. 還沒到頂(currentBaseLevel < maxBaseLevel)：
+//    今天「沒有任何一關失敗」就直接晉一關，stallCount歸零。
+//    今天「有失敗」則維持原關卡不降，但stallCount+1；
+//    累積到 stallLimitBeforeDemote 次才真的降一關，降完stallCount歸零。
+// 2. 已經到頂(currentBaseLevel === maxBaseLevel)：
+//    改成看分數成長，今天分數 >= 昨天分數 * promoteMultiplier 才算「過」(維持在頂，stallCount歸零)。
+//    沒有達標算「不過」，stallCount+1；累積到 stallLimitBeforeDemote 次才降一關。
+//    （沒有昨天分數可比的極端情況，先當作「過」，避免一到頂就被誤降）
+//
+// 降級之後，回到「還沒到頂」狀態，就會重新套用規則1，只要打好就能再爬上去。
+//
+// 回傳 { nextBaseLevel, nextStallCount }，呼叫端要把這兩個值都存起來
 // ============================================
-function calculateNextDayStartLevel(todayScore, prevScore, currentBaseLevel, hasFailedGrade) {
+function calculateNextDayStartLevel(todayScore, prevScore, currentBaseLevel, hasFailedGrade, stallCount = 0) {
   let nextBaseLevel = currentBaseLevel;
+  let nextStallCount = stallCount;
 
-  if (prevScore === null) {
-    // 第一天沒有比較基準，維持原關卡，除非今天就失敗
-    if (hasFailedGrade) {
-      nextBaseLevel = currentBaseLevel - 1;
+  if (currentBaseLevel < SCORING_CONFIG.maxBaseLevel) {
+    if (!hasFailedGrade) {
+      nextBaseLevel = currentBaseLevel + 1;
+      nextStallCount = 0;
+    } else {
+      nextStallCount = stallCount + 1;
+      if (nextStallCount >= SCORING_CONFIG.stallLimitBeforeDemote) {
+        nextBaseLevel = currentBaseLevel - 1;
+        nextStallCount = 0;
+      }
     }
   } else {
-    // 情況 A：表現優異，順利晉級
-    if (
-      todayScore >= prevScore * SCORING_CONFIG.promoteMultiplier ||
-      todayScore > SCORING_CONFIG.promoteAbsoluteThreshold
-    ) {
-      nextBaseLevel = currentBaseLevel + 1;
-    }
-    // 情況 B：表現明顯下滑，或當天有失敗關卡
-    else if (
-      todayScore < prevScore * SCORING_CONFIG.demoteMultiplier ||
-      hasFailedGrade
-    ) {
-      nextBaseLevel = currentBaseLevel - 1;
+    const passed = prevScore === null || todayScore >= prevScore * SCORING_CONFIG.promoteMultiplier;
+    if (passed) {
+      nextStallCount = 0;
+    } else {
+      nextStallCount = stallCount + 1;
+      if (nextStallCount >= SCORING_CONFIG.stallLimitBeforeDemote) {
+        nextBaseLevel = currentBaseLevel - 1;
+        nextStallCount = 0;
+      }
     }
   }
 
@@ -136,7 +152,7 @@ function calculateNextDayStartLevel(todayScore, prevScore, currentBaseLevel, has
   if (nextBaseLevel < 1) nextBaseLevel = 1;
   if (nextBaseLevel > SCORING_CONFIG.maxBaseLevel) nextBaseLevel = SCORING_CONFIG.maxBaseLevel;
 
-  return nextBaseLevel;
+  return { nextBaseLevel, nextStallCount };
 }
 
 // ============================================

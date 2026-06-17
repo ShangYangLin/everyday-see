@@ -93,6 +93,7 @@ function applyTranslations() {
   document.getElementById("memos-label").textContent = t("importantMemos");
   document.getElementById("btn-add-photo").textContent = t("addPhoto");
   document.getElementById("btn-share").textContent = t("shareButton");
+  document.getElementById("btn-play-today").textContent = t("playTodayButton");
 }
 
 // ============================================
@@ -753,11 +754,16 @@ async function endTodaySession(early = false) {
   hideGiveUpButton();
 
   const baseScore = calculateDailyScore(appState.todayLevelResults);
-  const todayScore = baseScore + (appState.todayBonusScore || 0);
+  const todayBonus = appState.todayBonusScore || 0;
+  const todayScore = baseScore + todayBonus;
   const todayDateStr = getTodayDateString();
   const hasFailedGrade = appState.todayLevelResults.some(r => r.grade === 1);
 
-  // 取得前一天分數（直接使用當天記錄的 grade，不再用殘缺資料重新評分）
+  // 把今天的問答加分存起來，這樣明天回頭重建「昨天分數」時才能正確算進去
+  // (原本這個加分只存在記憶體appState裡，從來沒有寫進資料庫，導致比較基準偏低)
+  await setAppState(`bonus_${todayDateStr}`, todayBonus);
+
+  // 取得前一天分數（用當天記錄的 grade 重新計算基本分，再加回當天存的問答加分）
   const lastDate = await getMostRecentLogDate(todayDateStr);
   let prevScore = null;
   if (lastDate) {
@@ -766,11 +772,16 @@ async function endTodaySession(early = false) {
       level: log.level,
       grade: typeof log.grade === "number" ? log.grade : 1 // 找不到grade的舊資料保守視為Grade 1
     }));
-    prevScore = calculateDailyScore(prevResults);
+    const prevBonus = await getAppState(`bonus_${lastDate}`, 0);
+    prevScore = calculateDailyScore(prevResults) + prevBonus;
   }
 
   const currentBaseLevel = await getAppState("current_base_level", 1);
-  let nextBaseLevel = calculateNextDayStartLevel(todayScore, prevScore, currentBaseLevel, hasFailedGrade);
+  const currentStallCount = await getAppState("level_stall_count", 0);
+  const { nextBaseLevel: rawNextBaseLevel, nextStallCount } = calculateNextDayStartLevel(
+    todayScore, prevScore, currentBaseLevel, hasFailedGrade, currentStallCount
+  );
+  let nextBaseLevel = rawNextBaseLevel;
 
   // 第7關開始：若今天在某一關卡關/放棄，明天起始關卡不可超過該關（避免越級）
   if (appState.stuckAtLevel && nextBaseLevel > appState.stuckAtLevel) {
@@ -778,6 +789,7 @@ async function endTodaySession(early = false) {
   }
 
   await setAppState("current_base_level", nextBaseLevel);
+  await setAppState("level_stall_count", nextStallCount);
   await setAppState("last_play_date", todayDateStr);
   appState.stuckAtLevel = null;
 
@@ -921,15 +933,18 @@ async function renderTestPanel() {
   if (prevDate) {
     const prevLogs = await getGameLogsByDate(prevDate);
     const prevResults = prevLogs.map(log => ({ level: log.level, grade: typeof log.grade === "number" ? log.grade : 1 }));
-    const prevScore = calculateDailyScore(prevResults);
+    const prevBonus = await getAppState(`bonus_${prevDate}`, 0);
+    const prevScore = calculateDailyScore(prevResults) + prevBonus;
     prevScoreText = `${prevScore.toFixed(1)} (${prevDate})`;
   }
+  const stallCount = await getAppState("level_stall_count", 0);
 
   panel.innerHTML = `
     <div style="margin-bottom:8px;">
       🧪 測試模式　今天(虛擬): ${today}<br>
       上次遊玩日期: ${lastPlayDate || "（無）"}　起始關卡指標: ${baseLevel}<br>
-      首刷引導完成: ${onboardingDone ? "是" : "否"}　昨天得分: ${prevScoreText}
+      首刷引導完成: ${onboardingDone ? "是" : "否"}　昨天得分: ${prevScoreText}<br>
+      連續未過次數: ${stallCount} / 2（累積到2才會降一關）
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
       <button id="test-advance-1" style="flex:1;min-width:90px;padding:10px;border:none;border-radius:8px;background:#E8A87C;color:#2C2C2A;font-weight:bold;">+1 天</button>
@@ -973,6 +988,7 @@ async function renderTestPanel() {
     if (isNaN(value)) return;
     value = Math.max(1, Math.min(10, value));
     await setAppState("current_base_level", value);
+    await setAppState("level_stall_count", 0);
     await showDashboard();
   };
   document.getElementById("test-locale-select").onchange = async (e) => {
@@ -1298,7 +1314,7 @@ async function maybeShowAddMemoScreen(onContinue) {
     const question = document.getElementById("add-memo-question").value.trim();
     const answer = document.getElementById("add-memo-answer").value.trim();
     if (question && answer) {
-      await addMemoryTask({ question, answer, hint: answer });
+      await addMemoryTask({ question, answer, hint: question });
     }
     onContinue();
   };

@@ -60,6 +60,7 @@ const TRANSLATIONS = {
     importantMemos: "重要記憶事項",
     streakDays: "連續訓練天數",
     shareButton: "邀請家人",
+    playTodayButton: "開始今天的遊戲",
 
     addPhoto: "新增/更新照片",
     managePhotosTitle: "管理家人照片",
@@ -136,6 +137,7 @@ const TRANSLATIONS = {
     importantMemos: "Important Memories",
     streakDays: "Days in a Row",
     shareButton: "Invite Family",
+    playTodayButton: "Play Today's Game",
 
     addPhoto: "Add/Update Photo",
     managePhotosTitle: "Manage Family Photos",
@@ -212,6 +214,7 @@ const TRANSLATIONS = {
     importantMemos: "Memorias Importantes",
     streakDays: "Días Consecutivos",
     shareButton: "Invitar Familia",
+    playTodayButton: "Jugar Hoy",
 
     addPhoto: "Añadir/Actualizar Foto",
     managePhotosTitle: "Administrar Fotos Familiares",
@@ -288,6 +291,7 @@ const TRANSLATIONS = {
     importantMemos: "大切な記憶事項",
     streakDays: "連続記録日数",
     shareButton: "家族を招待",
+    playTodayButton: "今日のゲームを始める",
 
     addPhoto: "写真を追加/更新",
     managePhotosTitle: "家族の写真を管理",
