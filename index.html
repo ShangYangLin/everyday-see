@@ -61,6 +61,27 @@
       <button class="btn" id="btn-save-memory-task">記下來</button>
     </div>
 
+    <!-- 支線任務：小提醒問答 -->
+    <div id="screen-quiz" class="screen hidden overlay">
+      <h2 id="quiz-title">小提醒時間</h2>
+      <p id="quiz-question"></p>
+      <input type="text" class="input-field" id="quiz-answer-input">
+      <p id="quiz-feedback" class="quiz-feedback hidden"></p>
+      <p id="quiz-slow-reminder" class="quiz-slow-reminder hidden"></p>
+      <button class="btn" id="btn-quiz-submit">確定</button>
+      <button class="btn btn-secondary hidden" id="btn-quiz-hint">給我提示</button>
+      <button class="btn btn-skip" id="btn-quiz-skip">先跳過</button>
+    </div>
+
+    <!-- 詢問是否新增重要記憶事項 -->
+    <div id="screen-add-memo" class="screen hidden overlay">
+      <h2 id="add-memo-title"></h2>
+      <input type="text" class="input-field" id="add-memo-question" placeholder="">
+      <input type="text" class="input-field" id="add-memo-answer" placeholder="">
+      <button class="btn" id="btn-save-new-memo">記下來</button>
+      <button class="btn btn-skip" id="btn-skip-new-memo">現在不用</button>
+    </div>
+
     <!-- 過關 / 完成畫面 -->
     <div id="screen-complete" class="screen hidden overlay">
       <h2 id="complete-title">過關了！</h2>
@@ -78,8 +99,14 @@
       </div>
 
       <div class="dashboard-item">
-        <h3 id="album-label">家人卡片蒐集冊</h3>
+        <h3 id="album-label">家人相冊</h3>
         <div class="family-album-grid" id="family-album-grid"></div>
+
+        <div class="album-hint-box" id="album-hint-box">
+          <span class="album-hint-arrow">↓</span>
+          <p id="album-hint-text" class="album-hint-text"></p>
+        </div>
+
         <button class="btn btn-secondary" id="btn-add-photo">新增/更新照片</button>
       </div>
 

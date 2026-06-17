@@ -7,6 +7,34 @@
 // 上線前將此設為 false，即可隱藏遊戲畫面上的分數/關卡除錯資訊
 const DEBUG_MODE = true;
 
+// ---- 測試模式：可在不受真實日期限制的情況下，模擬「過了好幾天」 ----
+// 上線前把 enabled 設為 false 即可完全關閉測試面板
+const TEST_MODE = {
+  enabled: true,
+  virtualDate: null // null = 使用真實日期；設定後 getTodayDateString() 會回傳這個值
+};
+
+// 把虛擬日期往後推 N 天（預設1天），用於測試「隔天」的晉降級邏輯
+function testAdvanceDay(days = 1) {
+  const base = TEST_MODE.virtualDate ? new Date(TEST_MODE.virtualDate) : new Date();
+  base.setDate(base.getDate() + days);
+  TEST_MODE.virtualDate = base.toISOString().split("T")[0];
+  return TEST_MODE.virtualDate;
+}
+
+// 清空所有 IndexedDB 資料，重新從第一天開始測試
+async function testResetAllData() {
+  const db = await openDB();
+  const storeNames = ["cards_store", "game_logs_store", "memory_tasks_store", "app_state_store"];
+  await Promise.all(storeNames.map(name => new Promise((resolve, reject) => {
+    const tx = db.transaction(name, "readwrite");
+    tx.objectStore(name).clear();
+    tx.oncomplete = resolve;
+    tx.onerror = (e) => reject(e.target.error);
+  })));
+  TEST_MODE.virtualDate = null;
+}
+
 // ---- 全域狀態 ----
 let appState = {
   onboardingStep: 0,        // 目前在引導流程的第幾步
@@ -582,7 +610,12 @@ async function checkLevelComplete() {
     level: appState.currentLevel,
     durationSeconds: Math.round(durationSeconds),
     errorCount: gameState.errorCount,
-    intervals: gameState.intervals
+    intervals: gameState.intervals,
+    totalCards: totalCards,
+    clickCount: gameState.clickCount,
+    gaveUp: false,
+    grade: gradeResult.grade,
+    score: calculateLevelScore(appState.currentLevel, gradeResult.grade)
   });
 
   hideGiveUpButton();
@@ -708,7 +741,11 @@ async function handleGiveUp() {
     durationSeconds: Math.round(durationSeconds),
     errorCount: gameState.errorCount,
     intervals: gameState.intervals,
-    gaveUp: true
+    totalCards: gameState.deck ? gameState.deck.filter(c => !c.isDecorative).length : 0,
+    clickCount: gameState.clickCount,
+    gaveUp: true,
+    grade: 1,
+    score: calculateLevelScore(appState.currentLevel, 1)
   });
 
   // 連續觸發兩次，當天遊戲立刻提前結束
@@ -768,21 +805,14 @@ async function endTodaySession(early = false) {
   const todayDateStr = getTodayDateString();
   const hasFailedGrade = appState.todayLevelResults.some(r => r.grade === 1);
 
-  // 取得前一天分數
+  // 取得前一天分數（直接使用當天記錄的 grade，不再用殘缺資料重新評分）
   const lastDate = await getMostRecentLogDate(todayDateStr);
   let prevScore = null;
   if (lastDate) {
     const prevLogs = await getGameLogsByDate(lastDate);
     const prevResults = prevLogs.map(log => ({
       level: log.level,
-      grade: log.gaveUp ? 1 : evaluateLevelGrade({
-        totalCards: 0, // 簡化：歷史資料無法重算總卡數，這裡僅用於演示
-        clickCount: 0,
-        intervals: log.intervals || [],
-        gaveUp: !!log.gaveUp,
-        durationSeconds: log.durationSeconds,
-        level: log.level
-      }).grade
+      grade: typeof log.grade === "number" ? log.grade : 1 // 找不到grade的舊資料保守視為Grade 1
     }));
     prevScore = calculateDailyScore(prevResults);
   }
@@ -807,8 +837,13 @@ async function endTodaySession(early = false) {
 
 // ============================================
 // 取得今日日期字串 YYYY-MM-DD
+// 測試模式：若 TEST_MODE.virtualDate 有設定，優先採用虛擬日期，
+// 讓開發者可以在同一天內模擬「過了好幾天」，不受真實時鐘限制。
 // ============================================
 function getTodayDateString() {
+  if (TEST_MODE.enabled && TEST_MODE.virtualDate) {
+    return TEST_MODE.virtualDate;
+  }
   const d = new Date();
   return d.toISOString().split("T")[0];
 }
@@ -853,7 +888,58 @@ async function showDashboard() {
   document.getElementById("btn-share").onclick = handleShareInvite;
   document.getElementById("btn-play-today").onclick = startTodaySession;
 
+  if (TEST_MODE.enabled) {
+    await renderTestPanel();
+  }
+
   showScreen("screen-dashboard");
+}
+
+// ============================================
+// 測試面板：模擬天數推進，方便連續測試多天流程
+// ============================================
+async function renderTestPanel() {
+  let panel = document.getElementById("test-panel");
+  if (!panel) {
+    panel = document.createElement("div");
+    panel.id = "test-panel";
+    panel.style.cssText = "max-width:480px;margin:0 auto 16px;padding:16px;background:#2C2C2A;color:#FFE8D6;border-radius:16px;font-size:14px;font-family:monospace;text-align:left;line-height:1.6;";
+    const dashboardScreen = document.getElementById("screen-dashboard");
+    dashboardScreen.insertBefore(panel, dashboardScreen.firstChild.nextSibling);
+  }
+
+  const baseLevel = await getAppState("current_base_level", 1);
+  const lastPlayDate = await getAppState("last_play_date", null);
+  const onboardingDone = await getAppState("onboarding_done", false);
+  const today = getTodayDateString();
+
+  panel.innerHTML = `
+    <div style="margin-bottom:8px;">
+      🧪 測試模式　今天(虛擬): ${today}<br>
+      上次遊玩日期: ${lastPlayDate || "（無）"}　起始關卡指標: ${baseLevel}<br>
+      首刷引導完成: ${onboardingDone ? "是" : "否"}
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button id="test-advance-1" style="flex:1;min-width:90px;padding:10px;border:none;border-radius:8px;background:#E8A87C;color:#2C2C2A;font-weight:bold;">+1 天</button>
+      <button id="test-advance-5" style="flex:1;min-width:90px;padding:10px;border:none;border-radius:8px;background:#E8A87C;color:#2C2C2A;font-weight:bold;">+5 天</button>
+      <button id="test-reset" style="flex:1;min-width:90px;padding:10px;border:none;border-radius:8px;background:#E07A5F;color:#fff;font-weight:bold;">重置全部資料</button>
+    </div>
+  `;
+
+  document.getElementById("test-advance-1").onclick = async () => {
+    testAdvanceDay(1);
+    await showDashboard();
+  };
+  document.getElementById("test-advance-5").onclick = async () => {
+    testAdvanceDay(5);
+    await showDashboard();
+  };
+  document.getElementById("test-reset").onclick = async () => {
+    if (confirm("確定要清空所有測試資料嗎？（卡片、紀錄、進度全部重來）")) {
+      await testResetAllData();
+      location.reload();
+    }
+  };
 }
 
 // ============================================
