@@ -327,6 +327,7 @@ async function proceedOnboarding() {
       appState.onboardingStep = "done";
       await setAppState("onboarding_done", true);
       await setAppState("current_base_level", 2);
+      await setAppState("dashboard_hint_stage", "album");
       // 記成「今天已經玩過」（而不是null），這樣下一次玩才會被正確判定為「不是第一天」，
       // 正式啟用計分、滾動調整關卡、支線任務（小提醒問答/新增重要事項）
       await setAppState("last_play_date", getTodayDateString());
@@ -794,6 +795,12 @@ async function endTodaySession(early = false) {
   await setAppState("last_play_date", todayDateStr);
   appState.stuckAtLevel = null;
 
+  // 第一次真正遊戲結束後，把主頁引導提示從「相冊」換成「重要記憶事項」
+  const hintStage = await getAppState("dashboard_hint_stage", null);
+  if (hintStage === "album") {
+    await setAppState("dashboard_hint_stage", "memory");
+  }
+
   // 顯示溫暖的結束訊息（不顯示失敗字眼）
   showCompleteOverlay(t("greatJobMessage"), null, async () => {
     await showDashboard();
@@ -818,9 +825,8 @@ function getTodayDateString() {
 // 跟原本固定寫在畫面上的文字不同，這個是動態算出相冊的實際位置框住它，
 // 文字框則是另一個浮動氣泡，點擊畫面任意處就會消失
 // ============================================
-function showAlbumSpotlightHint(message) {
-  const grid = document.getElementById("family-album-grid");
-  const target = grid ? (grid.closest(".dashboard-item") || grid) : null;
+function showDashboardSpotlight(targetElementId, message) {
+  const target = document.getElementById(targetElementId);
   const spotlight = document.getElementById("album-spotlight");
   const tooltip = document.getElementById("album-tooltip");
   const tooltipText = document.getElementById("album-tooltip-text");
@@ -854,6 +860,21 @@ function showAlbumSpotlightHint(message) {
 }
 
 // ============================================
+// 主頁引導提示，分兩階段：
+// 階段"album"：引導(第1-5關)結束後，框住家人相冊
+// 階段"memory"：第一次「真正遊戲」結束後，換成框住重要記憶事項
+// 兩階段都用同一組紅色虛線聚光燈元件，只是換目標跟文字
+// ============================================
+async function showStagedDashboardHint() {
+  const stage = await getAppState("dashboard_hint_stage", null);
+  if (stage === "album") {
+    requestAnimationFrame(() => showDashboardSpotlight("album-dashboard-item", t("albumSpotlightCaption")));
+  } else if (stage === "memory") {
+    requestAnimationFrame(() => showDashboardSpotlight("memos-dashboard-item", t("memorySpotlightCaption")));
+  }
+}
+
+// ============================================
 // 主頁面 / 儀表板
 // ============================================
 async function showDashboard() {
@@ -877,9 +898,8 @@ async function showDashboard() {
     }
   });
 
-  // 相冊還是空的時候，用框住整個相冊的提示引導使用者新增第一張照片
-  // (實際呼叫移到最後面的 showScreen 之後，等畫面真的可見了才量位置)
-  const shouldShowAlbumHint = visibleCards.length === 0;
+  // 主頁引導提示分兩階段(album→memory)，實際呼叫移到最後面 showScreen 之後，
+  // 等畫面真的可見了才量位置
 
   // 重要記憶事項
   const tasks = await getAllMemoryTasks();
@@ -907,9 +927,7 @@ async function showDashboard() {
 
   // 一定要等畫面真的顯示出來(從 display:none 變成可見)之後才能量到正確的位置，
   // 用 requestAnimationFrame 確保瀏覽器已經完成這次的版面配置(layout)
-  if (shouldShowAlbumHint) {
-    requestAnimationFrame(() => showAlbumSpotlightHint(t("familyAlbumHint")));
-  }
+  await showStagedDashboardHint();
 }
 
 // ============================================
@@ -1032,12 +1050,16 @@ async function renderManagePhotosList() {
     const row = document.createElement("div");
     row.className = "person-row";
 
-    // 照片區（最多4張照片格）
+    // 照片區：只顯示「已有的照片」+ 1個「+」新增格(滿4張就不再顯示+)
     const photosDiv = document.createElement("div");
     photosDiv.className = "person-photos";
 
-    for (let i = 0; i < 4; i++) {
+    const filledCount = getPhotos(card).length;
+    for (let i = 0; i < filledCount; i++) {
       photosDiv.appendChild(buildPhotoSlot(card, i));
+    }
+    if (filledCount < 4) {
+      photosDiv.appendChild(buildPhotoSlot(card, filledCount)); // 這格是空的，會自動顯示成「+」
     }
 
     // 資訊區（姓名輸入框 + 刪除按鈕）

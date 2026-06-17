@@ -81,6 +81,8 @@ const TRANSLATIONS = {
 
     familyAlbum: "家人相冊",
     familyAlbumHint: "可以在這裡新增家人照片喔，越多照片越有趣！",
+    albumSpotlightCaption: "加入更多家人照片，照片越多樂趣越多",
+    memorySpotlightCaption: "讓我幫助你記得重要事項",
     importantMemos: "重要記憶事項",
     streakDays: "連續訓練天數",
     shareButton: "邀請家人",
@@ -183,6 +185,8 @@ const TRANSLATIONS = {
 
     familyAlbum: "Family Album",
     familyAlbumHint: "Add family photos here — the more, the merrier!",
+    albumSpotlightCaption: "Add more family photos — the more, the merrier!",
+    memorySpotlightCaption: "Let me help you remember what matters",
     importantMemos: "Important Memories",
     streakDays: "Days in a Row",
     shareButton: "Invite Family",
@@ -285,6 +289,8 @@ const TRANSLATIONS = {
 
     familyAlbum: "Álbum Familiar",
     familyAlbumHint: "¡Añada fotos familiares aquí, cuantas más, mejor!",
+    albumSpotlightCaption: "Añada más fotos familiares, ¡cuantas más, mejor!",
+    memorySpotlightCaption: "Déjeme ayudarle a recordar lo importante",
     importantMemos: "Memorias Importantes",
     streakDays: "Días Consecutivos",
     shareButton: "Invitar Familia",
@@ -387,6 +393,8 @@ const TRANSLATIONS = {
 
     familyAlbum: "家族アルバム",
     familyAlbumHint: "ここにご家族の写真を追加できます。写真が増えるほど楽しくなります！",
+    albumSpotlightCaption: "家族の写真をもっと追加しましょう、多いほど楽しいです",
+    memorySpotlightCaption: "大切なことを記憶するお手伝いをします",
     importantMemos: "大切な記憶事項",
     streakDays: "連続記録日数",
     shareButton: "家族を招待",
