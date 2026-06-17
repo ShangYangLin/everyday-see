@@ -92,6 +92,7 @@ function applyTranslations() {
   document.getElementById("album-label").textContent = t("familyAlbum");
   document.getElementById("memos-label").textContent = t("importantMemos");
   document.getElementById("btn-add-photo").textContent = t("addPhoto");
+  document.getElementById("btn-manage-memos").textContent = t("manageMemosButton");
   document.getElementById("btn-share").textContent = t("shareButton");
   document.getElementById("btn-play-today").textContent = t("playTodayButton");
 }
@@ -186,8 +187,7 @@ async function handleConfirmRelation() {
   const card = {
     cardId,
     relation: relationName,
-    imageCurrent: appState.pendingPhotoBlob,
-    imagePast: null,
+    photos: [appState.pendingPhotoBlob, null, null, null], // 最多4張，目前只有第1張
     audioHint: null,
     hidden: false
   };
@@ -201,9 +201,10 @@ async function saveSecondPhoto() {
   const cardId = appState.pendingRelationCardId;
   let card = await getCard(cardId);
   if (!card) {
-    card = { cardId, relation: "家人", imageCurrent: appState.pendingPhotoBlob, imagePast: null, hidden: false };
+    card = { cardId, relation: "家人", photos: [appState.pendingPhotoBlob, null, null, null], hidden: false };
   } else {
-    card.imagePast = appState.pendingPhotoBlob;
+    if (!card.photos) card.photos = [null, null, null, null];
+    card.photos[1] = appState.pendingPhotoBlob;
   }
   await saveCard(card);
   appState.pendingPhotoBlob = null;
@@ -225,12 +226,11 @@ async function handleSkipUpload() {
   await saveCard({
     cardId,
     relation: fallback.relation,
-    imageCurrent: null,
-    imagePast: null,
+    photos: [null, null, null, null],
     audioHint: null,
     hidden: true,
     isFallback: true,
-    fallbackImage: fallback.imageCurrent
+    fallbackImage: fallback.photos[0]
   });
   await proceedOnboarding();
 }
@@ -257,7 +257,7 @@ async function proceedOnboarding() {
 
     // 第1關完成 → 隨機選A或B補第2張照片
     case "before_level_2": {
-      const cards = (await getAllCards()).filter(c => !c.isFallback && c.imageCurrent);
+      const cards = (await getAllCards()).filter(c => !c.isFallback && c.photos && c.photos[0]);
       const target = cards[Math.floor(Math.random() * cards.length)];
       appState.level2TargetCardId = target ? target.cardId : "card_slot_01";
       const targetCard = target || { relation: "家人" };
@@ -292,9 +292,9 @@ async function proceedOnboarding() {
 
     // 第4關完成 → 從只有1張照片的家人(B或C)隨機選一人補第2張
     case "before_level_5": {
-      const allCards = (await getAllCards()).filter(c => !c.isFallback && c.imageCurrent);
-      // 只有1張照片的家人（沒有 imagePast）
-      const singlePhotoCards = allCards.filter(c => !c.imagePast);
+      const allCards = (await getAllCards()).filter(c => !c.isFallback && c.photos && c.photos[0]);
+      // 只有1張照片的家人（沒有第2張）
+      const singlePhotoCards = allCards.filter(c => !c.photos[1]);
       if (singlePhotoCards.length > 0) {
         const target = singlePhotoCards[Math.floor(Math.random() * singlePhotoCards.length)];
         appState.level5TargetCardId = target.cardId;
@@ -361,7 +361,8 @@ function showMemoryTaskScreen() {
       await addMemoryTask({
         question: t("quizContactPhoneQuestion", { name }),
         answer: phone,
-        hint: name
+        hint: name,
+        category: "contact_phone"
       });
     }
 
@@ -867,9 +868,10 @@ async function showDashboard() {
   const albumGrid = document.getElementById("family-album-grid");
   albumGrid.innerHTML = "";
   visibleCards.forEach(card => {
-    if (card.imageCurrent) {
+    const thumb = card.photos && card.photos[0];
+    if (thumb) {
       const img = document.createElement("img");
-      img.src = blobToURL(card.imageCurrent);
+      img.src = blobToURL(thumb);
       img.title = card.relation;
       albumGrid.appendChild(img);
     }
@@ -892,6 +894,7 @@ async function showDashboard() {
 
   // 綁定按鈕
   document.getElementById("btn-add-photo").onclick = showManagePhotosScreen;
+  document.getElementById("btn-manage-memos").onclick = handleManualAddMemo;
 
   document.getElementById("btn-share").onclick = handleShareInvite;
   document.getElementById("btn-play-today").onclick = startTodaySession;
@@ -1029,12 +1032,13 @@ async function renderManagePhotosList() {
     const row = document.createElement("div");
     row.className = "person-row";
 
-    // 照片區（現在照片 + 第二張照片）
+    // 照片區（最多4張照片格）
     const photosDiv = document.createElement("div");
     photosDiv.className = "person-photos";
 
-    photosDiv.appendChild(buildPhotoSlot(card, "imageCurrent", t("currentPhotoLabel")));
-    photosDiv.appendChild(buildPhotoSlot(card, "imagePast", t("secondPhotoLabel")));
+    for (let i = 0; i < 4; i++) {
+      photosDiv.appendChild(buildPhotoSlot(card, i));
+    }
 
     // 資訊區（姓名輸入框 + 刪除按鈕）
     const infoDiv = document.createElement("div");
@@ -1069,12 +1073,12 @@ async function renderManagePhotosList() {
 }
 
 // 建立單一照片格子（顯示現有照片，或顯示「新增」可點擊上傳）
-function buildPhotoSlot(card, fieldName, label) {
+function buildPhotoSlot(card, photoIndex) {
   const el = document.createElement("div");
   el.className = "person-photo";
-  el.title = label;
+  el.title = t("photoSlotLabel", { n: photoIndex + 1 });
 
-  const imageData = card[fieldName];
+  const imageData = card.photos && card.photos[photoIndex];
 
   if (imageData) {
     el.style.backgroundImage = `url(${blobToURL(imageData)})`;
@@ -1085,13 +1089,13 @@ function buildPhotoSlot(card, fieldName, label) {
     el.textContent = "+";
   }
 
-  el.onclick = () => triggerPhotoSlotUpload(card, fieldName);
+  el.onclick = () => triggerPhotoSlotUpload(card, photoIndex);
 
   return el;
 }
 
 // 點擊照片格子時，開啟檔案選擇並更新該欄位
-function triggerPhotoSlotUpload(card, fieldName) {
+function triggerPhotoSlotUpload(card, photoIndex) {
   const fileInput = document.getElementById("file-input");
   fileInput.value = "";
 
@@ -1100,7 +1104,8 @@ function triggerPhotoSlotUpload(card, fieldName) {
     if (!file) return;
 
     const base64 = await fileToBlob(file);
-    card[fieldName] = base64;
+    if (!card.photos) card.photos = [null, null, null, null];
+    card.photos[photoIndex] = base64;
     await saveCard(card);
 
     await renderManagePhotosList();
@@ -1128,8 +1133,7 @@ async function handleAddNewPerson() {
   const newCard = {
     cardId: newCardId,
     relation: t("relationNamePlaceholder"),
-    imageCurrent: null,
-    imagePast: null,
+    photos: [null, null, null, null],
     audioHint: null,
     hidden: false
   };
@@ -1258,9 +1262,7 @@ async function showQuizScreen(onContinue) {
 
   document.getElementById("btn-quiz-hint").onclick = () => {
     appState.quizUsedHint = true;
-    const hintEl = document.getElementById("quiz-hint-text");
-    hintEl.textContent = `${t("quizHintPrefix")}${task.hint || ""}`;
-    hintEl.classList.remove("hidden");
+    document.getElementById("quiz-answer-input").value = task.answer || "";
   };
 
   document.getElementById("btn-quiz-submit").onclick = async () => {
@@ -1294,33 +1296,218 @@ async function showQuizScreen(onContinue) {
 // ============================================
 // 支線任務：詢問是否新增重要記憶事項（少於5項才問）
 // ============================================
-async function maybeShowAddMemoScreen(onContinue) {
-  const allTasks = await getAllMemoryTasks();
+// 5個固定分類，依序隨機問，問完(或選否/其他)就不再問，使用者可自行於儀表板手動新增
+const ALL_MEMORY_CATEGORIES = ["medication", "doctor_visit", "birthday", "school", "transportation"];
 
-  if (allTasks.length >= 5) {
+const MEMORY_CATEGORY_TEXT = {
+  medication: { ask: () => t("askHasMedication"), detail: () => t("askMedicationTime"), label: () => t("labelMedicationTime") },
+  doctor_visit: { ask: () => t("askHasDoctorVisit"), detail: () => t("askDoctorVisitTime"), label: () => t("labelDoctorVisit") },
+  birthday: { ask: (name) => t("askKnowsBirthday", { name }), detail: (name) => t("askBirthdayIs", { name }), label: (name) => t("labelBirthday", { name }) },
+  school: { ask: (name) => t("askKnowsSchool", { name }), detail: (name) => t("askSchoolIs", { name }), label: (name) => t("labelSchool", { name }) }
+};
+
+async function markCategoryResolved(categoryId) {
+  const resolved = await getAppState("resolved_categories", []);
+  if (!resolved.includes(categoryId)) {
+    resolved.push(categoryId);
+    await setAppState("resolved_categories", resolved);
+  }
+}
+
+async function maybeShowAddMemoScreen(onContinue) {
+  const resolved = await getAppState("resolved_categories", []);
+  const pending = ALL_MEMORY_CATEGORIES.filter(id => !resolved.includes(id));
+
+  if (pending.length === 0) {
     onContinue();
     return;
   }
 
+  const categoryId = pending[Math.floor(Math.random() * pending.length)];
+
+  if (categoryId === "birthday" || categoryId === "school") {
+    const realCards = (await getAllCards()).filter(c => !c.isFallback && getPhotos(c).length > 0);
+    if (realCards.length === 0) {
+      // 還沒有任何家人照片，這次先跳過、不標記完成，下次再抽到機會
+      onContinue();
+      return;
+    }
+    showFamilyPickerForCategory(categoryId, realCards, onContinue);
+    return;
+  }
+
+  if (categoryId === "transportation") {
+    showTransportationQuestion(onContinue);
+    return;
+  }
+
+  showCategoryYesNo(categoryId, null, onContinue);
+}
+
+// 生日/學校類：先選要問哪位家人
+function showFamilyPickerForCategory(categoryId, realCards, onContinue) {
+  document.getElementById("category-task-title").textContent = t("selectFamilyMemberTitle");
+  document.getElementById("category-task-question").textContent = "";
+  const optionsEl = document.getElementById("category-task-options");
+  optionsEl.innerHTML = "";
+
+  realCards.forEach(card => {
+    const btn = document.createElement("button");
+    btn.className = "btn btn-secondary";
+    btn.textContent = card.relation;
+    btn.onclick = () => showCategoryYesNo(categoryId, card.relation, onContinue);
+    optionsEl.appendChild(btn);
+  });
+
+  const skipBtn = document.createElement("button");
+  skipBtn.className = "btn btn-skip";
+  skipBtn.textContent = t("quizSkip");
+  skipBtn.onclick = () => onContinue(); // 這次不選，不標記完成，下次再抽到機會
+  optionsEl.appendChild(skipBtn);
+
+  showScreen("screen-category-task");
+}
+
+// 是否題：是 → 進細節題；否 → 標記完成，以後不再問
+function showCategoryYesNo(categoryId, targetName, onContinue) {
+  const textDef = MEMORY_CATEGORY_TEXT[categoryId];
+  document.getElementById("category-task-title").textContent = t("quizPromptTitle");
+  document.getElementById("category-task-question").textContent = textDef.ask(targetName);
+  const optionsEl = document.getElementById("category-task-options");
+  optionsEl.innerHTML = "";
+
+  const yesBtn = document.createElement("button");
+  yesBtn.className = "btn";
+  yesBtn.textContent = t("yesAnswer");
+  yesBtn.onclick = () => showCategoryDetail(categoryId, targetName, onContinue);
+  optionsEl.appendChild(yesBtn);
+
+  const noBtn = document.createElement("button");
+  noBtn.className = "btn btn-secondary";
+  noBtn.textContent = t("noAnswer");
+  noBtn.onclick = async () => {
+    await markCategoryResolved(categoryId);
+    onContinue();
+  };
+  optionsEl.appendChild(noBtn);
+
+  showScreen("screen-category-task");
+}
+
+// 細節題：填寫實際答案，存成可被支線任務問答的記憶事項
+function showCategoryDetail(categoryId, targetName, onContinue) {
+  const textDef = MEMORY_CATEGORY_TEXT[categoryId];
+  const questionText = textDef.detail(targetName);
+
+  document.getElementById("category-task-title").textContent = t("quizPromptTitle");
+  document.getElementById("category-task-question").textContent = questionText;
+  const optionsEl = document.getElementById("category-task-options");
+  optionsEl.innerHTML = "";
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "input-field";
+  optionsEl.appendChild(input);
+
+  const saveBtn = document.createElement("button");
+  saveBtn.className = "btn";
+  saveBtn.textContent = t("addMemoSave");
+  saveBtn.onclick = async () => {
+    const answer = input.value.trim();
+    if (answer) {
+      await addMemoryTask({ question: questionText, answer, hint: textDef.label(targetName), category: categoryId });
+    }
+    await markCategoryResolved(categoryId);
+    onContinue();
+  };
+  optionsEl.appendChild(saveBtn);
+
+  showScreen("screen-category-task");
+  input.focus();
+}
+
+// 交通工具：三選一，開車/騎車與大眾運輸要再問細節，其他直接標記完成
+function showTransportationQuestion(onContinue) {
+  document.getElementById("category-task-title").textContent = t("quizPromptTitle");
+  document.getElementById("category-task-question").textContent = t("askTransportMode");
+  const optionsEl = document.getElementById("category-task-options");
+  optionsEl.innerHTML = "";
+
+  const driveBtn = document.createElement("button");
+  driveBtn.className = "btn";
+  driveBtn.textContent = t("transportDrive");
+  driveBtn.onclick = () => showTransportationDetail("askVehiclePlate", onContinue);
+  optionsEl.appendChild(driveBtn);
+
+  const transitBtn = document.createElement("button");
+  transitBtn.className = "btn";
+  transitBtn.textContent = t("transportTransit");
+  transitBtn.onclick = () => showTransportationDetail("askTransitRoute", onContinue);
+  optionsEl.appendChild(transitBtn);
+
+  const otherBtn = document.createElement("button");
+  otherBtn.className = "btn btn-secondary";
+  otherBtn.textContent = t("transportOther");
+  otherBtn.onclick = async () => {
+    await markCategoryResolved("transportation");
+    onContinue();
+  };
+  optionsEl.appendChild(otherBtn);
+
+  showScreen("screen-category-task");
+}
+
+function showTransportationDetail(questionKey, onContinue) {
+  const questionText = t(questionKey);
+  const labelKey = questionKey === "askVehiclePlate" ? "labelVehiclePlate" : "labelTransitRoute";
+  document.getElementById("category-task-title").textContent = t("quizPromptTitle");
+  document.getElementById("category-task-question").textContent = questionText;
+  const optionsEl = document.getElementById("category-task-options");
+  optionsEl.innerHTML = "";
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "input-field";
+  optionsEl.appendChild(input);
+
+  const saveBtn = document.createElement("button");
+  saveBtn.className = "btn";
+  saveBtn.textContent = t("addMemoSave");
+  saveBtn.onclick = async () => {
+    const answer = input.value.trim();
+    if (answer) {
+      await addMemoryTask({ question: questionText, answer, hint: t(labelKey), category: "transportation" });
+    }
+    await markCategoryResolved("transportation");
+    onContinue();
+  };
+  optionsEl.appendChild(saveBtn);
+
+  showScreen("screen-category-task");
+  input.focus();
+}
+
+// 儀表板手動「新增/更新事項」：自由輸入問題/答案，跟分類問答是分開的兩條路
+function handleManualAddMemo() {
   document.getElementById("add-memo-title").textContent = t("askAddNewMemo");
   document.getElementById("add-memo-question").placeholder = t("addMemoQuestionPlaceholder");
   document.getElementById("add-memo-answer").placeholder = t("addMemoAnswerPlaceholder");
   document.getElementById("add-memo-question").value = "";
   document.getElementById("add-memo-answer").value = "";
   document.getElementById("btn-save-new-memo").textContent = t("addMemoSave");
-  document.getElementById("btn-skip-new-memo").textContent = t("addMemoSkip");
+  document.getElementById("btn-skip-new-memo").textContent = t("backButton");
 
   document.getElementById("btn-save-new-memo").onclick = async () => {
     const question = document.getElementById("add-memo-question").value.trim();
     const answer = document.getElementById("add-memo-answer").value.trim();
     if (question && answer) {
-      await addMemoryTask({ question, answer, hint: question });
+      await addMemoryTask({ question, answer, hint: question, category: "custom" });
     }
-    onContinue();
+    await showDashboard();
   };
 
-  document.getElementById("btn-skip-new-memo").onclick = () => {
-    onContinue();
+  document.getElementById("btn-skip-new-memo").onclick = async () => {
+    await showDashboard();
   };
 
   showScreen("screen-add-memo");
@@ -1357,7 +1544,7 @@ async function maybeShowRandomEndHint(onContinue) {
   }
 
   // 隨著照片數/記憶事項數增加，降低出現頻率
-  const allCards = (await getAllCards()).filter(c => !c.isFallback && c.imageCurrent);
+  const allCards = (await getAllCards()).filter(c => !c.isFallback && c.photos && c.photos[0]);
   const allTasks = await getAllMemoryTasks();
   const totalItems = allCards.length + allTasks.length;
 

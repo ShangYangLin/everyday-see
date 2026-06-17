@@ -84,6 +84,13 @@
       <button class="btn btn-skip" id="btn-skip-new-memo">現在不用</button>
     </div>
 
+    <!-- 重要記憶事項：固定分類引導問題(吃藥/生日/回診/學校/交通工具) -->
+    <div id="screen-category-task" class="screen hidden overlay">
+      <h2 id="category-task-title"></h2>
+      <p id="category-task-question"></p>
+      <div id="category-task-options"></div>
+    </div>
+
     <!-- 過關 / 完成畫面 -->
     <div id="screen-complete" class="screen hidden overlay">
       <h2 id="complete-title">過關了！</h2>
@@ -110,6 +117,7 @@
       <div class="dashboard-item">
         <h3 id="memos-label">重要記憶事項</h3>
         <div id="memos-list"></div>
+        <button class="btn btn-secondary" id="btn-manage-memos">新增/更新事項</button>
       </div>
 
       <button class="btn" id="btn-share">邀請家人</button>

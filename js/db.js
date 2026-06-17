@@ -68,7 +68,7 @@ function openDB() {
 // ============================================
 
 // 新增或更新一張卡片（家人照片）
-// card = { cardId, relation, imageCurrent (Blob), imagePast (Blob, 可選), audioHint (Blob, 可選), hidden (bool) }
+// card = { cardId, relation, photos: [圖片1, 圖片2, 圖片3, 圖片4] (每格可為null), audioHint (可選), hidden (bool) }
 async function saveCard(card) {
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -246,11 +246,38 @@ function blobToURL(base64String) {
   return base64String; // base64 data URL 本身就可以直接當作 src
 }
 
-// 將圖片檔案 (File) 轉成 base64字串，存入 IndexedDB 更穩定（避免Blob相容性問題）
+// 將圖片檔案 (File) 縮圖壓縮後轉成 base64字串再存入 IndexedDB
+// 原始相機照片通常好幾MB，未經處理直接存的話：
+// 1. 同時渲染多張在卡牌上容易解碼失敗/渲染不出來（看起來像白卡）
+// 2. IndexedDB容量很快被撐爆（尤其現在每人最多4張）
+// 所以統一縮到最長邊1000px、JPEG品質0.82再存
 async function fileToBlob(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => resolve(reader.result); // data:image/...;base64,xxxx
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 1000;
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round(height * maxDim / width);
+            width = maxDim;
+          } else {
+            width = Math.round(width * maxDim / height);
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", 0.82));
+      };
+      img.onerror = (e) => reject(e);
+      img.src = reader.result;
+    };
     reader.onerror = (e) => reject(e);
     reader.readAsDataURL(file);
   });
