@@ -102,11 +102,6 @@
         <h3 id="album-label">家人相冊</h3>
         <div class="family-album-grid" id="family-album-grid"></div>
 
-        <div class="album-hint-box" id="album-hint-box">
-          <span class="album-hint-arrow">↓</span>
-          <p id="album-hint-text" class="album-hint-text"></p>
-        </div>
-
         <button class="btn btn-secondary" id="btn-add-photo">新增/更新照片</button>
       </div>
 
@@ -128,6 +123,13 @@
       <button class="btn" id="btn-back-to-dashboard">返回</button>
     </div>
 
+  </div>
+
+  <!-- 引導提示：框住家人相冊的聚光燈 + 浮動對話框，點擊畫面任意處即可關閉 -->
+  <div id="album-spotlight" class="album-spotlight hidden"></div>
+  <div id="album-tooltip" class="album-tooltip hidden">
+    <span class="album-hint-arrow">↑</span>
+    <p id="album-tooltip-text" class="album-hint-text"></p>
   </div>
 
   <script src="js/i18n.js"></script>

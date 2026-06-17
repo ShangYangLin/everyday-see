@@ -38,8 +38,13 @@ function getTimeLimit(level) {
 }
 
 // ============================================
-// 預設備用人物：3人，每人有2張不同造型的圖片
-// 用於模擬「同一人的兩張不同照片」，避免配對時出現4張一樣的怪異畫面
+// 預設備用人物
+// 其中3位是「雙照片」人物（current+past，可用於展示同一人新舊對比）
+// 另外3位是「單照片」人物（只有 current），用來增加備用照片的多樣性，
+// 避免家人照片不夠時，同一張備用照片在同一關裡被重複抽到。
+//
+// girl_longhair / grandma_floral / man_beard 這三個檔名/路徑是依你提供的名稱推測的
+// (假設放在 avatars/ 資料夾，副檔名 .png)，如果實際路徑不同，改這裡三個字串即可。
 // ============================================
 const FALLBACK_PERSONS = [
   {
@@ -59,8 +64,89 @@ const FALLBACK_PERSONS = [
     relation: "兒子",
     imageCurrent: "avatars/young_son.png",
     imagePast: "avatars/boy_blackjacket.png"
+  },
+  {
+    cardId: "fallback_04",
+    relation: "孫女",
+    imageCurrent: "avatars/girl_longhair.png",
+    imagePast: null
+  },
+  {
+    cardId: "fallback_05",
+    relation: "奶奶",
+    imageCurrent: "avatars/grandma_floral.png",
+    imagePast: null
+  },
+  {
+    cardId: "fallback_06",
+    relation: "叔叔",
+    imageCurrent: "avatars/man_beard.png",
+    imagePast: null
   }
 ];
+
+// 把所有備用人物拆成「照片池」，每張 current/past 各算一筆獨立照片
+function buildFallbackPhotoPool() {
+  const pool = [];
+  FALLBACK_PERSONS.forEach(p => {
+    if (p.imageCurrent) {
+      pool.push({ cardId: p.cardId, relation: p.relation, image: p.imageCurrent, photoKey: `${p.cardId}_current` });
+    }
+    if (p.imagePast) {
+      pool.push({ cardId: p.cardId, relation: p.relation, image: p.imagePast, photoKey: `${p.cardId}_past` });
+    }
+  });
+  return pool;
+}
+
+// 抽一張「這次牌局還沒用過」的備用照片，回傳可直接丟進 makeEntry() 的卡片物件
+// (統一放在 imageCurrent 欄位，呼叫端一律用 "current" 取用即可，不用管原始是current或past)
+// usedPhotoKeys: 同一次 generateLevelDeck() 呼叫內共用的 Set，確保同一張照片不被選兩次
+function drawFallbackPhoto(usedPhotoKeys) {
+  let candidates = buildFallbackPhotoPool().filter(p => !usedPhotoKeys.has(p.photoKey));
+
+  if (candidates.length === 0) {
+    // 極端情況：這一關需要的備用照片數量超過了全部9張，才允許重複
+    candidates = buildFallbackPhotoPool();
+  }
+
+  const pick = candidates[Math.floor(Math.random() * candidates.length)];
+  usedPhotoKeys.add(pick.photoKey);
+
+  return {
+    cardId: pick.cardId,
+    relation: pick.relation,
+    isFallback: true,
+    imageCurrent: pick.image,
+    imagePast: null
+  };
+}
+
+// 抽一位「現在+以前都有照片」的備用人物，用於需要展示同一人新舊對比的關卡(例如第2關)
+// 會把這個人的兩張照片都標記為已使用，避免之後又被單獨抽到造成重複
+function drawDualFallbackPerson(usedPhotoKeys) {
+  const dualPersons = FALLBACK_PERSONS.filter(p =>
+    p.imageCurrent && p.imagePast &&
+    !usedPhotoKeys.has(`${p.cardId}_current`) &&
+    !usedPhotoKeys.has(`${p.cardId}_past`)
+  );
+
+  const pool = dualPersons.length > 0
+    ? dualPersons
+    : FALLBACK_PERSONS.filter(p => p.imageCurrent && p.imagePast);
+
+  const p = pool[Math.floor(Math.random() * pool.length)];
+  usedPhotoKeys.add(`${p.cardId}_current`);
+  usedPhotoKeys.add(`${p.cardId}_past`);
+
+  return {
+    cardId: p.cardId,
+    relation: p.relation,
+    isFallback: true,
+    imageCurrent: p.imageCurrent,
+    imagePast: p.imagePast
+  };
+}
 
 async function generateLevelDeck(level, availableCards) {
   const config = LEVEL_CONFIG[level];
@@ -70,13 +156,17 @@ async function generateLevelDeck(level, availableCards) {
     .filter(c => !c.isFallback && c.imageCurrent)
     .sort((a, b) => a.cardId.localeCompare(b.cardId));
 
+  // 這一關用過的備用照片紀錄，避免同一關裡同一張備用照片被抽兩次
+  // (這是修正「同一張圖出現4次」的關鍵)
+  const usedPhotoKeys = new Set();
+
   let deck = [];
 
   switch (config.type) {
 
     case "level_1": {
-      const cardA = realCards.find(c => c.cardId === "card_slot_01") || realCards[0] || makeFallback(0);
-      const cardB = realCards.find(c => c.cardId === "card_slot_02") || realCards[1] || makeFallback(1);
+      const cardA = realCards.find(c => c.cardId === "card_slot_01") || realCards[0] || drawFallbackPhoto(usedPhotoKeys);
+      const cardB = realCards.find(c => c.cardId === "card_slot_02") || realCards[1] || drawFallbackPhoto(usedPhotoKeys);
       deck.push(makeEntry(cardA, "current", "L1_A"));
       deck.push(makeEntry(cardA, "current", "L1_A"));
       deck.push(makeEntry(cardB, "current", "L1_B"));
@@ -87,8 +177,8 @@ async function generateLevelDeck(level, availableCards) {
     case "level_2": {
       let dualCard = realCards.find(c => c.imageCurrent && c.imagePast);
       if (!dualCard) {
-        // 沒有真實的雙照片家人時，用一位 fallback 人物代替（已內建current+past兩張不同圖）
-        dualCard = makeFallback(0);
+        // 沒有真實的雙照片家人時，用一位「現在+以前都有照片」的備用人物代替
+        dualCard = drawDualFallbackPerson(usedPhotoKeys);
       }
       deck.push(makeEntry(dualCard, "current", "L2_cur"));
       deck.push(makeEntry(dualCard, "current", "L2_cur"));
@@ -99,7 +189,7 @@ async function generateLevelDeck(level, availableCards) {
 
     case "level_3": {
       let chosen = realCards.slice(0, 3);
-      while (chosen.length < 3) chosen.push(makeFallback(chosen.length));
+      while (chosen.length < 3) chosen.push(drawFallbackPhoto(usedPhotoKeys));
       chosen.forEach((card, i) => {
         const hasTwo = card.imageCurrent && card.imagePast;
         const photoType = hasTwo ? (Math.random() < 0.5 ? "current" : "past") : "current";
@@ -111,7 +201,7 @@ async function generateLevelDeck(level, availableCards) {
     }
 
     case "level_4": {
-      let dualCard = realCards.find(c => c.imageCurrent && c.imagePast) || realCards[0] || makeFallback(0);
+      let dualCard = realCards.find(c => c.imageCurrent && c.imagePast) || realCards[0] || drawDualFallbackPerson(usedPhotoKeys);
       deck.push(makeEntry(dualCard, "current", "L4_cur"));
       deck.push(makeEntry(dualCard, "current", "L4_cur"));
 
@@ -119,14 +209,14 @@ async function generateLevelDeck(level, availableCards) {
         deck.push(makeEntry(dualCard, "past", "L4_past"));
         deck.push(makeEntry(dualCard, "past", "L4_past"));
       } else {
-        // 這位家人只有1張照片，借用一位 fallback 人物頂替第二對，避免畫面出現4張一樣的照片
-        const substitute = makeFallback(1);
+        // 這位家人只有1張照片，借用一張不重複的備用照片頂替第二對
+        const substitute = drawFallbackPhoto(usedPhotoKeys);
         deck.push(makeEntry(substitute, "current", "L4_sub"));
         deck.push(makeEntry(substitute, "current", "L4_sub"));
       }
 
       const others = realCards.filter(c => c.cardId !== dualCard.cardId);
-      const otherCard = others.length > 0 ? others[Math.floor(Math.random() * others.length)] : makeFallback(2);
+      const otherCard = others.length > 0 ? others[Math.floor(Math.random() * others.length)] : drawFallbackPhoto(usedPhotoKeys);
       deck.push(makeEntry(otherCard, "current", "L4_other"));
       deck.push(makeEntry(otherCard, "current", "L4_other"));
       break;
@@ -134,8 +224,8 @@ async function generateLevelDeck(level, availableCards) {
 
     case "level_5": {
       const dualCards = realCards.filter(c => c.imageCurrent && c.imagePast);
-      const cardA = dualCards[0] || realCards[0] || makeFallback(0);
-      const cardB = dualCards[1] || realCards[1] || makeFallback(1);
+      const cardA = dualCards[0] || realCards[0] || drawDualFallbackPerson(usedPhotoKeys);
+      const cardB = dualCards[1] || realCards[1] || drawDualFallbackPerson(usedPhotoKeys);
 
       deck.push(makeEntry(cardA, "current", "L5_A_cur"));
       deck.push(makeEntry(cardA, "current", "L5_A_cur"));
@@ -143,7 +233,7 @@ async function generateLevelDeck(level, availableCards) {
         deck.push(makeEntry(cardA, "past", "L5_A_past"));
         deck.push(makeEntry(cardA, "past", "L5_A_past"));
       } else {
-        const subA = makeFallback(1);
+        const subA = drawFallbackPhoto(usedPhotoKeys);
         deck.push(makeEntry(subA, "current", "L5_A_sub"));
         deck.push(makeEntry(subA, "current", "L5_A_sub"));
       }
@@ -154,19 +244,14 @@ async function generateLevelDeck(level, availableCards) {
         deck.push(makeEntry(cardB, "past", "L5_B_past"));
         deck.push(makeEntry(cardB, "past", "L5_B_past"));
       } else {
-        const subB = makeFallback(2);
+        const subB = drawFallbackPhoto(usedPhotoKeys);
         deck.push(makeEntry(subB, "current", "L5_B_sub"));
         deck.push(makeEntry(subB, "current", "L5_B_sub"));
       }
 
       deck = shuffle(deck);
       // 在第5格（index 4）插入中間裝飾牌，不參與翻牌
-      deck.splice(4, 0, {
-        pairKey: "DECO_CENTER",
-        cardId: "deco",
-        displayType: "deco",
-        isDecorative: true
-      });
+      deck.splice(4, 0, makeDecoCard());
       break;
     }
 
@@ -175,7 +260,7 @@ async function generateLevelDeck(level, availableCards) {
     // ──────────────────────────────────────
     case "level_6": {
       let chosen = realCards.slice(0, 4);
-      while (chosen.length < 4) chosen.push(makeFallback(chosen.length));
+      while (chosen.length < 4) chosen.push(drawFallbackPhoto(usedPhotoKeys));
 
       chosen.forEach((card, i) => {
         const hasTwo = card.imageCurrent && card.imagePast;
@@ -200,12 +285,10 @@ async function generateLevelDeck(level, availableCards) {
       const pool = buildPhotoPool(realCards);
       const chosenPhotos = pickRandom(pool, config.pairCount);
 
-      // 萬一池子不夠大（極端情況），用fallback補滿
-      let fallbackIdx = 0;
+      // 萬一池子不夠大（真實照片不夠），用「不重複」的備用照片補滿
       while (chosenPhotos.length < config.pairCount) {
-        const fb = makeFallback(fallbackIdx);
-        chosenPhotos.push({ card: fb, photoType: "current", key: `extra_fb_${fallbackIdx}` });
-        fallbackIdx++;
+        const fb = drawFallbackPhoto(usedPhotoKeys);
+        chosenPhotos.push({ card: fb, photoType: "current", key: `extra_fb_${chosenPhotos.length}` });
       }
 
       chosenPhotos.forEach((entry, i) => {
@@ -246,7 +329,7 @@ function buildPhotoPool(realCards) {
   return pool;
 }
 
-// 建立一張裝飾牌（顯示App icon，不參與翻牌配對）
+// 建立一張裝飾牌（顯示裝飾符號，不參與翻牌配對，不依賴外部圖檔，避免圖檔遺失時整張空白）
 function makeDecoCard() {
   return {
     pairKey: `DECO_${Math.random().toString(36).slice(2)}`,
@@ -268,17 +351,6 @@ function makeEntry(card, photoType, pairKey) {
     // fallback情況下，imageCurrent/imagePast本身就是檔案路徑字串
     fallbackImage: isFallback ? (photoType === "past" ? card.imagePast : card.imageCurrent) : null,
     imageBlob: isFallback ? null : (photoType === "past" ? card.imagePast : card.imageCurrent)
-  };
-}
-
-function makeFallback(index) {
-  const f = FALLBACK_PERSONS[index % FALLBACK_PERSONS.length];
-  return {
-    cardId: f.cardId,
-    relation: f.relation,
-    isFallback: true,
-    imageCurrent: f.imageCurrent, // 檔案路徑字串，不是Blob
-    imagePast: f.imagePast
   };
 }
 

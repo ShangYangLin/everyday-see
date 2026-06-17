@@ -224,6 +224,80 @@ const TRANSLATIONS = {
       daughter: "Hija",
       grandchild: "Nieto"
     }
+  },
+
+  ja: {
+    appName: "毎日会いましょう",
+    welcomeTitle: "毎日会いましょう",
+    welcomeSubtitle: "寄り添い・記憶・毎日",
+    welcomeStart: "はじめる",
+
+    askUploadFirst: "一番親しいご家族の写真をアップロードしてください",
+    askWhoIsThis: "この方はどなたですか？",
+    askUploadAnother: "もう一人ご家族の写真をアップロードしてください",
+    uploadButton: "写真を選ぶ",
+    confirmButton: "確定",
+    skipButton: "スキップ",
+
+    askUploadSecondPhoto: "{name}の別の写真をもう一枚アップロードしてください",
+
+    memoryTaskTitle: "大切なことを教えていただければ、覚えるお手伝いをします。",
+    memoryTaskQuestion: "大切な連絡先はどなたですか？電話番号は？",
+    memoryTaskNamePlaceholder: "お名前",
+    memoryTaskPhonePlaceholder: "電話番号",
+    memoryTaskSave: "記録する",
+
+    quizPromptTitle: "ちょっとした確認です",
+    quizCorrect: "正解です！すばらしい",
+    quizWrong: "もう一度考えてみましょう",
+    quizShowHint: "ヒントをください",
+    quizSubmit: "確定",
+    quizSkip: "あとでやる",
+    quizSlowReminder: "ゆっくり考えてくださいね",
+
+    askAddNewMemo: "大切なことを教えていただけますか？",
+    addMemoQuestionPlaceholder: "何を覚えておきたいですか？（例：薬を飲む時間）",
+    addMemoAnswerPlaceholder: "答え・内容",
+    addMemoSave: "記録する",
+    addMemoSkip: "今はしない",
+
+    randomHintAddPhoto: "しばらく新しい写真がありませんね、追加しませんか？",
+    randomHintAddMemo: "大切なことを教えていただけますか？",
+
+    giveUpButton: "休憩する",
+    greatJobMessage: "今日もよく頑張りましたね！また明日お会いしましょう！",
+
+    levelComplete: "クリアしました！",
+    gameComplete: "すべて完了です！",
+
+    hintButton: "家族からのヒント",
+
+    inviteShare: "ご家族に近況の共有をお願いする",
+    inviteShareDesc: "ここをタップして、ご家族に挨拶の動画を送ってもらいましょう！",
+
+    familyAlbum: "家族アルバム",
+    familyAlbumHint: "ここにご家族の写真を追加できます。写真が増えるほど楽しくなります！",
+    importantMemos: "大切な記憶事項",
+    streakDays: "連続記録日数",
+    shareButton: "家族を招待",
+
+    addPhoto: "写真を追加/更新",
+    managePhotosTitle: "家族の写真を管理",
+    addNewPerson: "ご家族を追加",
+    backButton: "戻る",
+    currentPhotoLabel: "現在",
+    secondPhotoLabel: "2枚目",
+    addPhotoSlot: "追加",
+    relationNamePlaceholder: "関係/お名前",
+    deletePersonButton: "この方を削除",
+    confirmDeletePerson: "この方を削除しますか？関連する写真も削除されます。",
+
+    relationDefaults: {
+      spouse: "配偶者",
+      son: "息子",
+      daughter: "娘",
+      grandchild: "孫"
+    }
   }
 };
 
@@ -232,6 +306,7 @@ function detectLocale() {
   const lang = (navigator.language || "en").toLowerCase();
   if (lang.startsWith("zh")) return "zh";
   if (lang.startsWith("es")) return "es";
+  if (lang.startsWith("ja")) return "ja";
   return "en";
 }
 

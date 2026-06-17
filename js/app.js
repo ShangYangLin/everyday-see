@@ -90,7 +90,6 @@ function applyTranslations() {
   document.getElementById("dashboard-title").textContent = t("appName");
   document.getElementById("streak-label").textContent = t("streakDays");
   document.getElementById("album-label").textContent = t("familyAlbum");
-  document.getElementById("album-hint-text").textContent = t("familyAlbumHint");
   document.getElementById("memos-label").textContent = t("importantMemos");
   document.getElementById("btn-add-photo").textContent = t("addPhoto");
   document.getElementById("btn-share").textContent = t("shareButton");
@@ -230,7 +229,7 @@ async function handleSkipUpload() {
     audioHint: null,
     hidden: true,
     isFallback: true,
-    fallbackImage: fallback.image
+    fallbackImage: fallback.imageCurrent
   });
   await proceedOnboarding();
 }
@@ -316,72 +315,20 @@ async function proceedOnboarding() {
 
     // 第5關完成 → 記憶任務
     case "before_memory_task":
-      appState.onboardingStep = "memory_task_done";
+      appState.onboardingStep = "onboarding_complete";
       showMemoryTaskScreen();
       return;
 
-    // 記憶任務完成 → 問新家人D，進第6關
-    case "memory_task_done":
-      appState.onboardingStep = "upload_D1";
-      showSinglePhotoUpload("card_slot_04", "askUploadAnother", false);
-      return;
-
-    // D1上傳完（或跳過）→ 進第6關
-    case "upload_D1":
-      appState.onboardingStep = "before_level_7";
-      await playLevel(6, { onComplete: () => proceedOnboarding() });
-      return;
-
-    // 第6關完成 → 問照片最少的家人補第2張
-    case "before_level_7": {
-      const allCards7 = (await getAllCards()).filter(c => !c.isFallback && c.imageCurrent);
-      const singlePhotoCards7 = allCards7.filter(c => !c.imagePast);
-      if (singlePhotoCards7.length > 0) {
-        const target = singlePhotoCards7[Math.floor(Math.random() * singlePhotoCards7.length)];
-        appState.onboardingStep = "upload_second_for_level7";
-        showSinglePhotoUpload(target.cardId, "askUploadSecondPhoto", true, { name: target.relation });
-      } else {
-        appState.onboardingStep = "before_level_8";
-        await playLevel(7, { onComplete: () => proceedOnboarding() });
-      }
-      return;
-    }
-
-    case "upload_second_for_level7":
-      appState.onboardingStep = "before_level_8";
-      await playLevel(7, { onComplete: () => proceedOnboarding() });
-      return;
-
-    // 第7關完成 → 不問，直接進第8關
-    case "before_level_8":
-      appState.onboardingStep = "before_level_9";
-      await playLevel(8, { onComplete: () => proceedOnboarding() });
-      return;
-
-    // 第8關完成 → 問新家人E
-    case "before_level_9":
-      appState.onboardingStep = "upload_E1";
-      showSinglePhotoUpload("card_slot_05", "askUploadAnother", false);
-      return;
-
-    // E1上傳完（或跳過）→ 進第9關
-    case "upload_E1":
-      appState.onboardingStep = "before_level_10";
-      await playLevel(9, { onComplete: () => proceedOnboarding() });
-      return;
-
-    // 第9關完成 → 不問，直接進第10關
-    case "before_level_10":
-      appState.onboardingStep = "onboarding_complete";
-      await playLevel(10, { onComplete: () => proceedOnboarding() });
-      return;
-
-    // 第10關完成 → 結束引導，進主頁
+    // 記憶任務完成 → 結束引導（第一天=引導=固定5關），進主頁
+    // 原本第6~10關還會問新家人D、E的上傳，現在改成之後幾天透過「隨機提示」
+    // 或使用者自行到「管理家人照片」新增，不再卡在首刷流程裡，確保第一天剛好是5關
     case "onboarding_complete":
       appState.onboardingStep = "done";
       await setAppState("onboarding_done", true);
       await setAppState("current_base_level", 1);
-      await setAppState("last_play_date", null);
+      // 記成「今天已經玩過」（而不是null），這樣下一次玩才會被正確判定為「不是第一天」，
+      // 正式啟用計分、滾動調整關卡、支線任務（小提醒問答/新增重要事項）
+      await setAppState("last_play_date", getTodayDateString());
       showCompleteOverlay(t("gameComplete"), null, async () => {
         await showDashboard();
       });
@@ -446,7 +393,7 @@ async function playLevel(level, options = {}) {
     errorCount: 0,
     intervals: [],
     lastClickTime: null,
-    startTime: null,
+    startTime: Date.now(), // 改為進關卡就開始計時，不用等第一次點擊才開始算（否則發呆判定永遠不會在第一次點擊前生效）
     lockBoard: false,
     onComplete: options.onComplete
   };
@@ -473,11 +420,13 @@ function renderGameBoard() {
     cardEl.dataset.pairKey = cardData.pairKey;
 
     if (cardData.isDecorative) {
-      // 裝飾牌：永遠正面朝上顯示App icon，不可點擊，不參與配對
+      // 裝飾牌：永遠正面朝上顯示一個裝飾符號，不可點擊，不參與配對
+      // 改用純文字符號呈現，不依賴外部圖檔（若圖檔路徑錯誤或遺失，原本會整張空白）
       cardEl.classList.add("card-decorative");
-      cardEl.style.backgroundImage = "url(icons/icon-512.png)";
-      cardEl.style.backgroundSize = "cover";
-      cardEl.style.backgroundPosition = "center";
+      cardEl.style.backgroundImage = "";
+      cardEl.style.backgroundColor = "#F3D9B1";
+      cardEl.textContent = "🏡";
+      cardEl.style.fontSize = "36px";
       cardEl.style.cursor = "default";
       container.appendChild(cardEl);
       return;
@@ -537,9 +486,6 @@ function handleCardClick(cardEl, cardData, index) {
 
   // 記錄時間間隔
   const now = Date.now();
-  if (gameState.startTime === null) {
-    gameState.startTime = now;
-  }
   if (gameState.lastClickTime !== null) {
     const intervalSec = (now - gameState.lastClickTime) / 1000;
     gameState.intervals.push(intervalSec);
@@ -604,6 +550,12 @@ async function checkLevelComplete() {
   // 記錄這關結果
   appState.todayLevelResults.push({ level: appState.currentLevel, grade: gradeResult.grade });
 
+  // 第7關開始：只要這關被判定為失敗(Grade 1)，明天起始關卡就不應該超過這一關，
+  // 不論玩家是手動按放棄、還是被系統判定逾時/亂點才導致失敗
+  if (appState.currentLevel >= 7 && gradeResult.grade === 1) {
+    appState.stuckAtLevel = appState.currentLevel;
+  }
+
   // 寫入 game_logs_store
   await addGameLog({
     date: getTodayDateString(),
@@ -620,10 +572,12 @@ async function checkLevelComplete() {
 
   hideGiveUpButton();
 
-  // 顯示過關畫面
-  showCompleteOverlay(t("levelComplete"), null, () => {
-    if (gameState.onComplete) gameState.onComplete();
-  });
+  // 讓使用者多看一兩秒最後翻開的牌，不要太快跳走（原本是配對成功立刻跳轉，長輩根本看不清楚）
+  setTimeout(() => {
+    showCompleteOverlay(t("levelComplete"), null, () => {
+      if (gameState.onComplete) gameState.onComplete();
+    });
+  }, 1200);
 }
 
 // ============================================
@@ -655,7 +609,7 @@ function updateGiveUpButtonVisibility() {
     currentDuration,
     gameState.clickCount,
     playableCount,
-    gameState.lastClickTime
+    gameState.lastClickTime || gameState.startTime
   );
 
   const btn = document.getElementById("btn-giveup");
@@ -849,6 +803,45 @@ function getTodayDateString() {
 }
 
 // ============================================
+// 相冊聚光燈提示（問題6）：框住整個「家人相冊」區塊 + 獨立浮動對話框
+// 跟原本固定寫在畫面上的文字不同，這個是動態算出相冊的實際位置框住它，
+// 文字框則是另一個浮動氣泡，點擊畫面任意處就會消失
+// ============================================
+function showAlbumSpotlightHint(message) {
+  const target = document.getElementById("family-album-grid");
+  const spotlight = document.getElementById("album-spotlight");
+  const tooltip = document.getElementById("album-tooltip");
+  const tooltipText = document.getElementById("album-tooltip-text");
+  if (!target || !spotlight || !tooltip || !tooltipText) return;
+
+  const rect = target.getBoundingClientRect();
+  const padding = 10;
+
+  spotlight.style.top = `${rect.top - padding}px`;
+  spotlight.style.left = `${rect.left - padding}px`;
+  spotlight.style.width = `${rect.width + padding * 2}px`;
+  spotlight.style.height = `${rect.height + padding * 2}px`;
+  spotlight.classList.remove("hidden");
+
+  tooltipText.textContent = message;
+  tooltip.style.top = `${rect.bottom + padding + 12}px`;
+  tooltip.style.left = `${Math.max(16, rect.left)}px`;
+  tooltip.classList.remove("hidden");
+
+  const dismiss = () => {
+    spotlight.classList.add("hidden");
+    tooltip.classList.add("hidden");
+    document.removeEventListener("click", dismiss, true);
+    document.removeEventListener("touchstart", dismiss, true);
+  };
+  // 延後綁定，避免顯示提示的這次點擊事件馬上又把它自己關掉
+  setTimeout(() => {
+    document.addEventListener("click", dismiss, true);
+    document.addEventListener("touchstart", dismiss, true);
+  }, 0);
+}
+
+// ============================================
 // 主頁面 / 儀表板
 // ============================================
 async function showDashboard() {
@@ -870,6 +863,11 @@ async function showDashboard() {
       albumGrid.appendChild(img);
     }
   });
+
+  // 相冊還是空的時候，用框住整個相冊的提示引導使用者新增第一張照片
+  if (visibleCards.length === 0) {
+    showAlbumSpotlightHint(t("familyAlbumHint"));
+  }
 
   // 重要記憶事項
   const tasks = await getAllMemoryTasks();
@@ -1154,6 +1152,8 @@ async function handleAfterLevelInSequence(levels, index) {
     await showQuizScreen(() => playLevelSequence(levels, index + 1));
   } else if (index === 2) {
     await maybeShowAddMemoScreen(() => playLevelSequence(levels, index + 1));
+  } else if (index === 4) {
+    await showQuizScreen(() => playLevelSequence(levels, index + 1));
   } else {
     await playLevelSequence(levels, index + 1);
   }
