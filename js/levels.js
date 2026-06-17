@@ -166,7 +166,8 @@ async function generateLevelDeck(level, availableCards) {
 
     case "level_1": {
       const cardA = realCards.find(c => c.cardId === "card_slot_01") || realCards[0] || drawFallbackPhoto(usedPhotoKeys);
-      const cardB = realCards.find(c => c.cardId === "card_slot_02") || realCards[1] || drawFallbackPhoto(usedPhotoKeys);
+      const remainingForB = realCards.filter(c => c.cardId !== cardA.cardId);
+      const cardB = remainingForB.find(c => c.cardId === "card_slot_02") || remainingForB[0] || drawFallbackPhoto(usedPhotoKeys);
       deck.push(makeEntry(cardA, "current", "L1_A"));
       deck.push(makeEntry(cardA, "current", "L1_A"));
       deck.push(makeEntry(cardB, "current", "L1_B"));
@@ -225,7 +226,12 @@ async function generateLevelDeck(level, availableCards) {
     case "level_5": {
       const dualCards = realCards.filter(c => c.imageCurrent && c.imagePast);
       const cardA = dualCards[0] || realCards[0] || drawDualFallbackPerson(usedPhotoKeys);
-      const cardB = dualCards[1] || realCards[1] || drawDualFallbackPerson(usedPhotoKeys);
+
+      // cardB一定要排除掉cardA選中的那個人，不然像「只有一位家人有雙照片」這種情況，
+      // 原本的 dualCards[1]||realCards[1] 寫法可能還是會選到跟cardA同一個人(同一陣列裡剛好排在index1)
+      const dualCardsExcludingA = dualCards.filter(c => c.cardId !== cardA.cardId);
+      const realCardsExcludingA = realCards.filter(c => c.cardId !== cardA.cardId);
+      const cardB = dualCardsExcludingA[0] || realCardsExcludingA[0] || drawDualFallbackPerson(usedPhotoKeys);
 
       deck.push(makeEntry(cardA, "current", "L5_A_cur"));
       deck.push(makeEntry(cardA, "current", "L5_A_cur"));
