@@ -4,7 +4,7 @@
 // ============================================
 
 const DB_NAME = "everyday_see_db";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let dbInstance = null;
 
@@ -49,6 +49,12 @@ function openDB() {
       // 倉庫四：app_state_store - 存全域狀態 (key-value)
       if (!db.objectStoreNames.contains("app_state_store")) {
         db.createObjectStore("app_state_store", { keyPath: "key" });
+      }
+
+      // 倉庫五：sync_queue_store - 待同步到雲端的紀錄（離線/失敗時留著，之後重試）
+      if (!db.objectStoreNames.contains("sync_queue_store")) {
+        const syncStore = db.createObjectStore("sync_queue_store", { keyPath: "syncId" });
+        syncStore.createIndex("uploaded", "uploaded", { unique: false });
       }
     };
 
@@ -233,6 +239,56 @@ async function getAppState(key, defaultValue = null) {
       resolve(request.result ? request.result.value : defaultValue);
     };
     request.onerror = (e) => reject(e.target.error);
+  });
+}
+
+// ============================================
+// sync_queue_store 操作
+// ============================================
+
+// 加入一筆待同步紀錄
+async function addToSyncQueue(entry) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("sync_queue_store", "readwrite");
+    const store = tx.objectStore("sync_queue_store");
+    const request = store.put(entry);
+    request.onsuccess = () => resolve(entry);
+    request.onerror = (e) => reject(e.target.error);
+  });
+}
+
+// 取得所有「還沒上傳成功」的紀錄
+async function getPendingSyncItems() {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("sync_queue_store", "readonly");
+    const store = tx.objectStore("sync_queue_store");
+    const request = store.getAll();
+    request.onsuccess = () => resolve((request.result || []).filter(item => !item.uploaded));
+    request.onerror = (e) => reject(e.target.error);
+  });
+}
+
+// 標記某筆紀錄已經上傳成功
+async function markSyncItemUploaded(syncId) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("sync_queue_store", "readwrite");
+    const store = tx.objectStore("sync_queue_store");
+    const getRequest = store.get(syncId);
+    getRequest.onsuccess = () => {
+      const item = getRequest.result;
+      if (!item) {
+        resolve(false);
+        return;
+      }
+      item.uploaded = true;
+      const putRequest = store.put(item);
+      putRequest.onsuccess = () => resolve(true);
+      putRequest.onerror = (e) => reject(e.target.error);
+    };
+    getRequest.onerror = (e) => reject(e.target.error);
   });
 }
 

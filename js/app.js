@@ -65,6 +65,9 @@ window.addEventListener("DOMContentLoaded", async () => {
   applyTranslations();
   bindWelcomeEvents();
 
+  // 補送之前因為沒網路/失敗而留在佇列裡的雲端同步紀錄
+  flushSyncQueue();
+
   // 檢查是否已完成首刷引導
   const onboardingDone = await getAppState("onboarding_done", false);
   if (onboardingDone) {
@@ -794,6 +797,14 @@ async function endTodaySession(early = false) {
   await setAppState("level_stall_count", nextStallCount);
   await setAppState("last_play_date", todayDateStr);
   appState.stuckAtLevel = null;
+
+  // 把今天的分數結果送進雲端同步佇列(本機優先寫好，背景嘗試上傳，失敗不影響遊戲)
+  queueDailyScoreSync({
+    playDate: todayDateStr,
+    score: todayScore,
+    baseLevelAfter: nextBaseLevel,
+    hadFailure: hasFailedGrade
+  });
 
   // 第一次真正遊戲結束後，把主頁引導提示從「相冊」換成「重要記憶事項」
   const hintStage = await getAppState("dashboard_hint_stage", null);
