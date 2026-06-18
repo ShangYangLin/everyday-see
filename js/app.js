@@ -5,7 +5,7 @@
 
 // ---- 開發用設定 ----
 // 上線前將此設為 false，即可隱藏遊戲畫面上的分數/關卡除錯資訊
-const DEBUG_MODE = true;
+const DEBUG_MODE = false;
 
 // ---- 測試模式：可在不受真實日期限制的情況下，模擬「過了好幾天」 ----
 // 上線前把 enabled 設為 false 即可完全關閉測試面板
