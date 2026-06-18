@@ -22,7 +22,7 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei", sans-serif;
   background-color: #FFF8F0;
   color: #4A3F35;
-  font-size: 26px;
+  font-size: 1.625rem;
   line-height: 1.6;
   -webkit-user-select: none;
   user-select: none;
@@ -49,7 +49,7 @@ body {
 
 /* 標題文字 */
 h1 {
-  font-size: 40px;
+  font-size: 2.5rem;
   font-weight: bold;
   color: #E8A87C;
   text-align: center;
@@ -57,13 +57,13 @@ h1 {
 }
 
 h2 {
-  font-size: 32px;
+  font-size: 2rem;
   text-align: center;
   margin-bottom: 24px;
 }
 
 p {
-  font-size: 24px;
+  font-size: 1.5rem;
   text-align: center;
   margin-bottom: 16px;
 }
@@ -75,7 +75,7 @@ p {
   max-width: 360px;
   padding: 22px 32px;
   margin: 12px auto;
-  font-size: 26px;
+  font-size: 1.625rem;
   font-weight: bold;
   border: none;
   border-radius: 16px;
@@ -97,7 +97,7 @@ p {
 .btn-skip {
   background-color: transparent;
   color: #999;
-  font-size: 20px;
+  font-size: 1.25rem;
   text-decoration: underline;
 }
 
@@ -130,7 +130,7 @@ p {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 28px;
+  font-size: 1.75rem;
   cursor: pointer;
   border: 2px dashed transparent;
 }
@@ -145,7 +145,7 @@ p {
 }
 
 .person-row .person-info input {
-  font-size: 18px;
+  font-size: 1.125rem;
   border: 1px solid #D9C9B8;
   border-radius: 8px;
   padding: 6px 10px;
@@ -162,7 +162,7 @@ p {
   padding: 10px 16px;
   background-color: #4A3F35;
   color: #FFE8D6;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-family: monospace;
   border-radius: 8px;
   text-align: left;
@@ -180,7 +180,7 @@ p {
   right: 24px;
   background-color: #E07A5F;
   color: #fff;
-  font-size: 22px;
+  font-size: 1.375rem;
   font-weight: bold;
   padding: 16px 24px;
   border-radius: 50px;
@@ -195,7 +195,7 @@ p {
   width: 100%;
   max-width: 360px;
   padding: 16px;
-  font-size: 24px;
+  font-size: 1.5rem;
   border: 2px solid #D9C9B8;
   border-radius: 12px;
   margin: 12px auto;
@@ -224,7 +224,7 @@ p {
 }
 
 .upload-area .upload-icon {
-  font-size: 48px;
+  font-size: 3rem;
   color: #D9C9B8;
 }
 
@@ -272,7 +272,7 @@ p {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: 1.125rem;
   font-weight: bold;
   color: #fff;
   text-align: center;
@@ -331,7 +331,7 @@ p {
 }
 
 .celebration-emoji {
-  font-size: 90px;
+  font-size: 5.625rem;
   text-align: center;
   margin-bottom: 24px;
   animation: celebrate-bounce 0.8s ease-in-out infinite;
@@ -363,14 +363,14 @@ p {
 }
 
 .dashboard-item h3 {
-  font-size: 22px;
+  font-size: 1.375rem;
   margin-bottom: 8px;
   color: #E8A87C;
 }
 
 .family-album-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 8px;
 }
 
@@ -404,7 +404,7 @@ p {
 
 .album-hint-arrow {
   display: block;
-  font-size: 22px;
+  font-size: 1.375rem;
   color: #E8A87C;
   margin-bottom: 4px;
   animation: bounce-hint 1.5s infinite;
@@ -416,24 +416,78 @@ p {
 }
 
 .album-hint-text {
-  font-size: 16px;
+  font-size: 1rem;
   color: #A89884;
   margin: 0;
 }
 
 .quiz-feedback {
-  font-size: 22px;
+  font-size: 1.375rem;
   font-weight: bold;
   color: #6FA88A;
 }
 
+.dashboard-footer {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin-top: 20px;
+}
+
+.footer-link {
+  background: none;
+  border: none;
+  color: #A89884;
+  font-size: 1rem;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 8px;
+}
+
+.long-text {
+  text-align: left;
+  max-width: 400px;
+  font-size: 1.25rem;
+  white-space: pre-line;
+}
+
+.settings-section-label {
+  font-size: 1.25rem;
+  color: #E8A87C;
+  margin: 20px 0 8px;
+  text-align: left;
+  width: 100%;
+  max-width: 360px;
+}
+
+.settings-option-row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.settings-option-row .btn {
+  width: auto;
+  flex: 1;
+  min-width: 70px;
+  padding: 12px 8px;
+  font-size: 1.125rem;
+  margin: 0;
+}
+
+.memo-item-text {
+  font-size: 1.25rem;
+}
+
 .quiz-slow-reminder {
-  font-size: 18px;
+  font-size: 1.125rem;
   color: #E07A5F;
 }
 
 .quiz-hint-text {
-  font-size: 18px;
+  font-size: 1.125rem;
   color: #6F8FA8;
   background-color: #F3F7FA;
   border-radius: 8px;

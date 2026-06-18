@@ -59,9 +59,178 @@ let gameState = {
 };
 
 // ============================================
-// 初始化
+// 付費門檻 / 機構代碼
 // ============================================
+
+// 免費用戶（個人未訂閱、企業未啟用授權碼）最多只能玩到這一關
+const FREE_LEVEL_CAP = 6;
+
+// 機構代碼驗證：目前先用寫在程式裡的測試代碼，之後要換成查Supabase的正式代碼表
+// ⚠️ 寫在前端程式碼裡的清單，任何人打開原始碼都看得到，正式機構上線前一定要換成後端驗證
+const VALID_INSTITUTION_CODES = ["DEMO2026", "SEEYOU-TEST"];
+
+async function isPremiumUnlocked() {
+  const subscribed = await getAppState("is_subscribed", false);
+  const enterpriseUnlocked = await getAppState("is_enterprise_unlocked", false);
+  return subscribed || enterpriseUnlocked;
+}
+
+// 「訂閱」按鈕目前還沒接上StoreKit，先模擬解鎖成功，方便測試完整體驗
+// 之後接Capacitor + StoreKit時，這裡要換成真正處理購買結果後才設定is_subscribed
+async function handleSimulateSubscribe() {
+  await setAppState("is_subscribed", true);
+  alert(t("subscribeSimulatedMessage"));
+}
+
+async function handleSubmitInstitutionCode() {
+  const input = document.getElementById("institution-code-input");
+  const code = input.value.trim().toUpperCase();
+  const feedbackEl = document.getElementById("institution-code-feedback");
+
+  if (VALID_INSTITUTION_CODES.includes(code)) {
+    await setAppState("is_enterprise_unlocked", true);
+    await setAppState("enterprise_code", code);
+    feedbackEl.textContent = t("institutionCodeSuccess");
+    feedbackEl.classList.remove("hidden");
+    setTimeout(() => showSettingsScreen(), 1000);
+  } else {
+    feedbackEl.textContent = t("institutionCodeError");
+    feedbackEl.classList.remove("hidden");
+  }
+}
+
+// ============================================
+// 字體大小 / 語言偏好
+// ============================================
+
+const FONT_SIZE_MAP = { small: "87.5%", medium: "100%", large: "115%", xlarge: "130%" };
+
+async function applyFontSizePreference() {
+  const level = await getAppState("font_size_level", "medium");
+  document.documentElement.style.fontSize = FONT_SIZE_MAP[level] || FONT_SIZE_MAP.medium;
+}
+
+async function handleSetFontSize(level) {
+  await setAppState("font_size_level", level);
+  await applyFontSizePreference();
+  await showSettingsScreen();
+}
+
+// 語言偏好：有手動設定過就用設定的，否則用手機系統語言自動偵測(i18n.js的detectLocale)
+async function applyLocalePreference() {
+  const override = await getAppState("locale_override", null);
+  if (override) setLocale(override);
+}
+
+async function handleSetLocale(locale) {
+  await setAppState("locale_override", locale);
+  setLocale(locale);
+  applyTranslations();
+  await showSettingsScreen();
+}
+
+// ============================================
+// 關於 / 設定 / 機構代碼 / 聯繫 / 付費門檻 畫面
+// ============================================
+
+function showAboutScreen() {
+  document.getElementById("about-title").textContent = t("aboutTitle");
+  document.getElementById("about-body").textContent = t("aboutBody");
+  document.getElementById("btn-about-back").textContent = t("backButton");
+  document.getElementById("btn-about-back").onclick = () => showDashboard();
+  showScreen("screen-about");
+}
+
+async function showSettingsScreen() {
+  document.getElementById("settings-title").textContent = t("settingsTitle");
+  document.getElementById("settings-fontsize-label").textContent = t("settingsFontSizeLabel");
+  document.getElementById("settings-language-label").textContent = t("settingsLanguageLabel");
+
+  const currentFontSize = await getAppState("font_size_level", "medium");
+  const fontSizeOptions = document.getElementById("settings-fontsize-options");
+  fontSizeOptions.innerHTML = "";
+  [
+    { level: "small", label: t("fontSizeSmall") },
+    { level: "medium", label: t("fontSizeMedium") },
+    { level: "large", label: t("fontSizeLarge") },
+    { level: "xlarge", label: t("fontSizeXLarge") }
+  ].forEach(opt => {
+    const btn = document.createElement("button");
+    btn.className = opt.level === currentFontSize ? "btn" : "btn btn-secondary";
+    btn.textContent = opt.label;
+    btn.onclick = () => handleSetFontSize(opt.level);
+    fontSizeOptions.appendChild(btn);
+  });
+
+  const languageSelect = document.getElementById("settings-language-select");
+  languageSelect.value = getLocale();
+  languageSelect.onchange = (e) => handleSetLocale(e.target.value);
+
+  document.getElementById("btn-institution-entry").textContent = t("institutionEntryButton");
+  document.getElementById("btn-institution-entry").onclick = showInstitutionCodeScreen;
+
+  const enterpriseUnlocked = await getAppState("is_enterprise_unlocked", false);
+  const clearDataBtn = document.getElementById("btn-clear-all-data");
+  if (enterpriseUnlocked) {
+    clearDataBtn.style.display = "block";
+    clearDataBtn.textContent = t("clearAllDataButton");
+    clearDataBtn.onclick = async () => {
+      if (confirm(t("clearAllDataConfirm1")) && confirm(t("clearAllDataConfirm2"))) {
+        await testResetAllData();
+        location.reload();
+      }
+    };
+  } else {
+    clearDataBtn.style.display = "none";
+  }
+
+  document.getElementById("btn-settings-back").textContent = t("backButton");
+  document.getElementById("btn-settings-back").onclick = () => showDashboard();
+
+  showScreen("screen-settings");
+}
+
+function showInstitutionCodeScreen() {
+  document.getElementById("institution-code-title").textContent = t("institutionCodeTitle");
+  document.getElementById("institution-code-input").placeholder = t("institutionCodePlaceholder");
+  document.getElementById("institution-code-input").value = "";
+  document.getElementById("institution-code-feedback").classList.add("hidden");
+  document.getElementById("btn-submit-institution-code").textContent = t("confirmButton");
+  document.getElementById("btn-submit-institution-code").onclick = handleSubmitInstitutionCode;
+  document.getElementById("btn-institution-code-back").textContent = t("backButton");
+  document.getElementById("btn-institution-code-back").onclick = () => showSettingsScreen();
+  showScreen("screen-institution-code");
+}
+
+function showContactScreen() {
+  document.getElementById("contact-title").textContent = t("contactTitle");
+  document.getElementById("contact-body").textContent = t("contactBody");
+  const emailLink = document.getElementById("contact-email-link");
+  emailLink.textContent = t("contactEmailButton");
+  emailLink.href = `mailto:${t("contactEmailAddress")}`;
+  document.getElementById("btn-contact-back").textContent = t("backButton");
+  document.getElementById("btn-contact-back").onclick = () => showDashboard();
+  showScreen("screen-contact");
+}
+
+// 第7關起需要付費才能繼續，玩到第6關時觸發這個畫面
+function showPaywallScreen(onContinue) {
+  document.getElementById("paywall-title").textContent = t("paywallTitle");
+  document.getElementById("paywall-body").textContent = t("paywallBody");
+  document.getElementById("btn-paywall-subscribe").textContent = t("paywallSubscribeButton");
+  document.getElementById("btn-paywall-subscribe").onclick = async () => {
+    await handleSimulateSubscribe();
+    onContinue();
+  };
+  document.getElementById("btn-paywall-later").textContent = t("paywallLaterButton");
+  document.getElementById("btn-paywall-later").onclick = () => onContinue();
+  showScreen("screen-paywall");
+}
+
+
 window.addEventListener("DOMContentLoaded", async () => {
+  await applyLocalePreference();
+  await applyFontSizePreference();
   applyTranslations();
   bindWelcomeEvents();
 
@@ -919,13 +1088,16 @@ async function showDashboard() {
   tasks.forEach(task => {
     const p = document.createElement("p");
     p.textContent = `${task.hint}: ${task.answer}`;
-    p.style.fontSize = "20px";
+    p.className = "memo-item-text";
     memosList.appendChild(p);
   });
 
   // 綁定按鈕
   document.getElementById("btn-add-photo").onclick = showManagePhotosScreen;
   document.getElementById("btn-manage-memos").onclick = handleManualAddMemo;
+  document.getElementById("btn-about").onclick = showAboutScreen;
+  document.getElementById("btn-settings").onclick = showSettingsScreen;
+  document.getElementById("btn-contact").onclick = showContactScreen;
 
   document.getElementById("btn-share").onclick = handleShareInvite;
   document.getElementById("btn-play-today").onclick = startTodaySession;
@@ -1204,11 +1376,16 @@ async function startTodaySession() {
   appState.todayBonusScore = 0;
 
   const baseLevel = await getAppState("current_base_level", 1);
-  const levelsToPlay = [];
+  const fullLevelsToPlay = [];
   for (let i = 0; i < SCORING_CONFIG.dailyLevelCount; i++) {
     const lvl = Math.min(baseLevel + i, 10);
-    levelsToPlay.push(lvl);
+    fullLevelsToPlay.push(lvl);
   }
+
+  // 免費用戶（個人未訂閱、企業未啟用授權碼）只能玩到第6關
+  const premium = await isPremiumUnlocked();
+  const levelsToPlay = premium ? fullLevelsToPlay : fullLevelsToPlay.filter(lvl => lvl <= FREE_LEVEL_CAP);
+  appState.paywallPending = !premium && levelsToPlay.length < fullLevelsToPlay.length;
 
   const lastPlayDate = await getAppState("last_play_date", null);
   const isFirstDay = !lastPlayDate;
@@ -1222,6 +1399,11 @@ async function startTodaySession() {
 // 依序播放關卡序列，並在指定關卡之間插入支線任務
 async function playLevelSequence(levels, index) {
   if (index >= levels.length) {
+    if (appState.paywallPending) {
+      appState.paywallPending = false;
+      showPaywallScreen(() => maybeShowRandomEndHint(() => endTodaySession(false)));
+      return;
+    }
     await maybeShowRandomEndHint(() => endTodaySession(false));
     return;
   }
