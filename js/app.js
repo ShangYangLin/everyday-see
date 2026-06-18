@@ -5,7 +5,7 @@
 
 // ---- 開發用設定 ----
 // 上線前將此設為 false，即可隱藏遊戲畫面上的分數/關卡除錯資訊
-const DEBUG_MODE = false;
+const DEBUG_MODE = true;
 
 // ---- 測試模式：可在不受真實日期限制的情況下，模擬「過了好幾天」 ----
 // 上線前把 enabled 設為 false 即可完全關閉測試面板
@@ -1081,9 +1081,22 @@ function showDashboardSpotlight(targetElementId, message) {
   spotlight.classList.remove("hidden");
 
   tooltipText.textContent = message;
-  tooltip.style.top = `${rect.bottom + padding + 12}px`;
-  tooltip.style.left = `${Math.max(16, rect.left)}px`;
   tooltip.classList.remove("hidden");
+
+  // 先量出提示框實際高度，再決定放在目標的上方還是下方，避免目標太靠近畫面底部時看不到
+  const tooltipHeight = tooltip.getBoundingClientRect().height;
+  const spaceBelow = window.innerHeight - rect.bottom;
+  const arrowEl = tooltip.querySelector(".album-hint-arrow");
+
+  if (spaceBelow < tooltipHeight + padding * 2) {
+    // 下面空間不夠，改放到目標上方，箭頭改成往下指
+    tooltip.style.top = `${Math.max(16, rect.top - tooltipHeight - padding - 12)}px`;
+    if (arrowEl) arrowEl.textContent = "↓";
+  } else {
+    tooltip.style.top = `${rect.bottom + padding + 12}px`;
+    if (arrowEl) arrowEl.textContent = "↑";
+  }
+  tooltip.style.left = `${Math.max(16, rect.left)}px`;
 
   const dismiss = () => {
     spotlight.classList.add("hidden");
@@ -1109,6 +1122,12 @@ async function showStagedDashboardHint() {
   if (stage === "album") {
     requestAnimationFrame(() => showDashboardSpotlight("album-dashboard-item", t("albumSpotlightCaption")));
   } else if (stage === "memory") {
+    // 起始關卡指標到4之後，視為使用者已經熟悉介面，不再顯示這個提示
+    const baseLevel = await getAppState("current_base_level", 1);
+    if (baseLevel >= 4) {
+      await setAppState("dashboard_hint_stage", "done");
+      return;
+    }
     requestAnimationFrame(() => showDashboardSpotlight("memos-dashboard-item", t("memorySpotlightCaption")));
   }
 }
