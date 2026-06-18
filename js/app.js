@@ -410,6 +410,56 @@ async function handleSkipUpload() {
 // ============================================
 // 引導流程狀態機
 // ============================================
+// 上傳家人問候影片：每天過關時會播放這段影片
+const MAX_VIDEO_SIZE_BYTES = 20 * 1024 * 1024; // 20MB
+
+function showVideoUploadScreen() {
+  document.getElementById("video-upload-prompt").textContent = t("askUploadVideo");
+  document.getElementById("video-upload-hint").textContent = t("videoUploadHint");
+  document.getElementById("video-upload-feedback").classList.add("hidden");
+  document.getElementById("btn-skip-video-upload").textContent = t("skipButton");
+  document.getElementById("btn-skip-video-upload").onclick = handleSkipVideoUpload;
+
+  const uploadArea = document.getElementById("video-upload-area");
+  const fileInput = document.getElementById("video-file-input");
+  fileInput.value = "";
+  uploadArea.onclick = () => fileInput.click();
+  fileInput.onchange = handleVideoFileSelected;
+
+  showScreen("screen-video-upload");
+}
+
+async function handleVideoFileSelected(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const feedbackEl = document.getElementById("video-upload-feedback");
+
+  if (file.size > MAX_VIDEO_SIZE_BYTES) {
+    feedbackEl.textContent = t("videoTooLargeError");
+    feedbackEl.classList.remove("hidden");
+    event.target.value = "";
+    return;
+  }
+
+  feedbackEl.classList.add("hidden");
+
+  const reader = new FileReader();
+  reader.onload = async () => {
+    await setAppState("family_video", reader.result);
+    await proceedOnboarding();
+  };
+  reader.onerror = () => {
+    feedbackEl.textContent = t("videoTooLargeError");
+    feedbackEl.classList.remove("hidden");
+  };
+  reader.readAsDataURL(file);
+}
+
+async function handleSkipVideoUpload() {
+  await proceedOnboarding();
+}
+
 async function proceedOnboarding() {
   const step = appState.onboardingStep;
 
@@ -456,8 +506,14 @@ async function proceedOnboarding() {
       await playLevel(3, { onComplete: () => proceedOnboarding() });
       return;
 
-    // 第3關完成 → 不問，直接進第4關
+    // 第3關完成 → 邀請上傳一段問候影片（每天過關時會播放）
     case "before_level_4":
+      appState.onboardingStep = "video_upload_done";
+      showVideoUploadScreen();
+      return;
+
+    // 影片上傳完（或跳過）→ 進第4關
+    case "video_upload_done":
       appState.onboardingStep = "before_level_5";
       await playLevel(4, { onComplete: () => proceedOnboarding() });
       return;
@@ -746,8 +802,9 @@ async function checkLevelComplete() {
   hideGiveUpButton();
 
   // 讓使用者多看一兩秒最後翻開的牌，不要太快跳走（原本是配對成功立刻跳轉，長輩根本看不清楚）
-  setTimeout(() => {
-    showCompleteOverlay(t("levelComplete"), null, () => {
+  setTimeout(async () => {
+    const familyVideo = await getAppState("family_video", null);
+    showCompleteOverlay(t("levelComplete"), familyVideo, () => {
       if (gameState.onComplete) gameState.onComplete();
     });
   }, 600);
@@ -895,11 +952,13 @@ function showCompleteOverlay(title, mediaUrl, onContinue) {
   mediaContainer.innerHTML = "";
 
   if (mediaUrl) {
-    if (mediaUrl.endsWith(".mp4") || mediaUrl.endsWith(".webm")) {
+    if (mediaUrl.endsWith(".mp4") || mediaUrl.endsWith(".webm") || mediaUrl.startsWith("data:video/")) {
       const video = document.createElement("video");
       video.src = mediaUrl;
       video.autoplay = true;
-      video.controls = false;
+      video.muted = true; // 手機瀏覽器通常需要muted才能自動播放
+      video.playsInline = true;
+      video.controls = true;
       mediaContainer.appendChild(video);
     } else {
       // .gif、.png、.jpg 都走這裡；GIF會自動播放動畫

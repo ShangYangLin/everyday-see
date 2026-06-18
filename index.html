@@ -46,6 +46,18 @@
       <button class="btn btn-skip hidden" id="btn-skip-upload">跳過</button>
     </div>
 
+    <!-- 上傳問候影片 -->
+    <div id="screen-video-upload" class="screen hidden">
+      <h2 id="video-upload-prompt"></h2>
+      <p id="video-upload-hint" class="long-text"></p>
+      <div class="upload-area" id="video-upload-area">
+        <span class="upload-icon">🎬</span>
+      </div>
+      <input type="file" id="video-file-input" accept="video/*" style="display:none;">
+      <p id="video-upload-feedback" class="quiz-feedback hidden"></p>
+      <button class="btn btn-skip" id="btn-skip-video-upload"></button>
+    </div>
+
     <!-- 遊戲畫面 -->
     <div id="screen-game" class="screen hidden">
       <div id="debug-bar" class="debug-bar"></div>
