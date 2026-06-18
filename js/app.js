@@ -802,9 +802,8 @@ async function checkLevelComplete() {
   hideGiveUpButton();
 
   // 讓使用者多看一兩秒最後翻開的牌，不要太快跳走（原本是配對成功立刻跳轉，長輩根本看不清楚）
-  setTimeout(async () => {
-    const familyVideo = await getAppState("family_video", null);
-    showCompleteOverlay(t("levelComplete"), familyVideo, () => {
+  setTimeout(() => {
+    showCompleteOverlay(t("levelComplete"), null, () => {
       if (gameState.onComplete) gameState.onComplete();
     });
   }, 600);
@@ -1040,8 +1039,9 @@ async function endTodaySession(early = false) {
     await setAppState("dashboard_hint_stage", "memory");
   }
 
-  // 顯示溫暖的結束訊息（不顯示失敗字眼）
-  showCompleteOverlay(t("greatJobMessage"), null, async () => {
+  // 顯示溫暖的結束訊息（不顯示失敗字眼），如果有上傳問候影片，今天全部通關才播放
+  const familyVideo = await getAppState("family_video", null);
+  showCompleteOverlay(t("greatJobMessage"), familyVideo, async () => {
     await showDashboard();
   });
 }
@@ -1182,7 +1182,7 @@ async function renderTestPanel() {
     panel.id = "test-panel";
     panel.style.cssText = "max-width:480px;margin:0 auto 16px;padding:16px;background:#2C2C2A;color:#FFE8D6;border-radius:16px;font-size:14px;font-family:monospace;text-align:left;line-height:1.6;";
     const dashboardScreen = document.getElementById("screen-dashboard");
-    dashboardScreen.insertBefore(panel, dashboardScreen.firstChild.nextSibling);
+    dashboardScreen.appendChild(panel); // 放在最下面，方便測試時看畫面實際的感覺
   }
 
   const baseLevel = await getAppState("current_base_level", 1);
