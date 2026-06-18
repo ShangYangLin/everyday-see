@@ -1040,7 +1040,7 @@ async function endTodaySession(early = false) {
   }
 
   // 顯示溫暖的結束訊息（不顯示失敗字眼），如果有上傳問候影片，今天全部通關才播放
-  const familyVideo = await getAppState("family_video", null);
+  const familyVideo = await getAppState("family_video", null) || "videos/cheer.gif";
   showCompleteOverlay(t("greatJobMessage"), familyVideo, async () => {
     await showDashboard();
   });
