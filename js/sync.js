@@ -149,5 +149,6 @@ async function getVideoToPlay() {
     return { url, isPersonal: false };
   }
 
-  return { url: null, isPersonal: false };
+  // Supabase 還沒有資料時，用本機的備用影片
+  return { url: "videos/cheer.gif", isPersonal: false };
 }
