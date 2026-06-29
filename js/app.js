@@ -1056,12 +1056,17 @@ async function endTodaySession(early = false) {
 
   // 如果播的是預設影片（不是家人親自上傳的），在完成畫面下方顯示一個小提示
   if (!videoResult.isPersonal && videoResult.url) {
-    const reminderEl = document.createElement("p");
-    reminderEl.textContent = t("uploadPersonalVideoReminder");
-    reminderEl.style.cssText = "font-size:0.875rem;color:#A89884;margin-top:12px;text-align:center;padding:0 24px;";
+    const reminderBtn = document.createElement("button");
+    reminderBtn.textContent = t("uploadPersonalVideoReminder");
+    reminderBtn.className = "btn btn-secondary";
+    reminderBtn.style.cssText = "font-size:1rem;margin-top:12px;";
+    reminderBtn.onclick = () => {
+      document.getElementById("screen-complete").classList.add("hidden");
+      showVideoUploadScreen();
+    };
     const completeScreen = document.getElementById("screen-complete");
     const continueBtn = document.getElementById("btn-continue");
-    completeScreen.insertBefore(reminderEl, continueBtn);
+    completeScreen.insertBefore(reminderBtn, continueBtn);
   }
 }
 
