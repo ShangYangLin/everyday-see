@@ -408,6 +408,14 @@ p {
   gap: 8px;
 }
 
+.family-album-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
 .family-album-grid img {
   width: 100%;
   aspect-ratio: 1;
