@@ -88,6 +88,7 @@ const TRANSLATIONS = {
     memorySpotlightCaption: "讓我幫助你記得重要事項",
     importantMemos: "重要記憶事項",
     streakDays: "連續訓練天數",
+    streakDaysShort: "天",
     shareButton: "邀請家人",
     playTodayButton: "開始今天的遊戲",
 
@@ -128,6 +129,7 @@ const TRANSLATIONS = {
     paywallSubscribeButton: "訂閱解鎖更多關卡",
     paywallLaterButton: "現在不用，先繼續玩1-6關",
     subscribeSimulatedMessage: "（測試用）已模擬訂閱成功，之後接上StoreKit後這裡會換成真正的付款流程。",
+    uploadPersonalVideoReminder: "現在播放的是預設問候影片，要不要上傳家人錄的問候影片？每天完成後就能看到家人的臉喔！",
 
     relationDefaults: {
       spouse: "老伴",
@@ -221,6 +223,7 @@ const TRANSLATIONS = {
     memorySpotlightCaption: "Let me help you remember what matters",
     importantMemos: "Important Memories",
     streakDays: "Days in a Row",
+    streakDaysShort: "days",
     shareButton: "Invite Family",
     playTodayButton: "Play Today's Game",
 
@@ -261,6 +264,7 @@ const TRANSLATIONS = {
     paywallSubscribeButton: "Subscribe to Unlock More Levels",
     paywallLaterButton: "Not now, keep playing Levels 1-6",
     subscribeSimulatedMessage: "(Test only) Subscription simulated successfully. This will be replaced with real StoreKit payment later.",
+    uploadPersonalVideoReminder: "This is a default greeting video. Would you like to upload a personal video from your family? You'll see their face every time you finish!",
 
     relationDefaults: {
       spouse: "Spouse",
@@ -354,6 +358,7 @@ const TRANSLATIONS = {
     memorySpotlightCaption: "Déjeme ayudarle a recordar lo importante",
     importantMemos: "Memorias Importantes",
     streakDays: "Días Consecutivos",
+    streakDaysShort: "días",
     shareButton: "Invitar Familia",
     playTodayButton: "Jugar Hoy",
 
@@ -394,6 +399,7 @@ const TRANSLATIONS = {
     paywallSubscribeButton: "Suscribirse para Desbloquear Más Niveles",
     paywallLaterButton: "Ahora no, seguir con los Niveles 1-6",
     subscribeSimulatedMessage: "(Solo prueba) Suscripción simulada con éxito. Esto se reemplazará con el pago real de StoreKit más adelante.",
+    uploadPersonalVideoReminder: "Este es un video de saludo predeterminado. ¿Le gustaría subir un video personal de su familia?",
 
     relationDefaults: {
       spouse: "Cónyuge",
@@ -487,6 +493,7 @@ const TRANSLATIONS = {
     memorySpotlightCaption: "大切なことを記憶するお手伝いをします",
     importantMemos: "大切な記憶事項",
     streakDays: "連続記録日数",
+    streakDaysShort: "日",
     shareButton: "家族を招待",
     playTodayButton: "今日のゲームを始める",
 
@@ -527,6 +534,7 @@ const TRANSLATIONS = {
     paywallSubscribeButton: "登録してもっと多くの関をプレイ",
     paywallLaterButton: "今はしない、第1～6関を続ける",
     subscribeSimulatedMessage: "(テスト用) 登録成功をシミュレートしました。StoreKit接続後は実際の決済処理に置き換わります。",
+    uploadPersonalVideoReminder: "これはデフォルトのご挨拶動画です。ご家族が録画した動画をアップロードしませんか？",
 
     relationDefaults: {
       spouse: "配偶者",

@@ -87,3 +87,67 @@ async function flushSyncQueue() {
     }
   }
 }
+
+// ============================================
+// Supabase 預設問候影片輪播
+// 在 Supabase 後台建一張 default_videos 表：
+//   id bigserial primary key,
+//   url text not null,           -- 影片的公開網址(Supabase Storage或其他CDN)
+//   weight int default 1,        -- 權重，越大越常被選到
+//   active boolean default true  -- false就不會被抽到
+//
+// 允許anon讀取的RLS policy:
+//   create policy "anyone can read active videos" on default_videos
+//   for select to anon using (active = true);
+// ============================================
+
+let cachedDefaultVideos = null;
+
+async function fetchDefaultVideos() {
+  if (cachedDefaultVideos) return cachedDefaultVideos;
+  try {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/default_videos?active=eq.true&select=url,weight`, {
+      headers: {
+        "apikey": SUPABASE_KEY,
+        "Authorization": `Bearer ${SUPABASE_KEY}`
+      }
+    });
+    if (!response.ok) return [];
+    const videos = await response.json();
+    cachedDefaultVideos = videos;
+    return videos;
+  } catch (e) {
+    return [];
+  }
+}
+
+// 依照weight做加權隨機抽取
+function pickWeightedRandom(videos) {
+  if (!videos || videos.length === 0) return null;
+  const totalWeight = videos.reduce((sum, v) => sum + (v.weight || 1), 0);
+  let rand = Math.random() * totalWeight;
+  for (const v of videos) {
+    rand -= (v.weight || 1);
+    if (rand <= 0) return v.url;
+  }
+  return videos[videos.length - 1].url;
+}
+
+// 取得要播放的影片URL：優先用個人上傳的家人影片，
+// 沒有的話從Supabase預設影片池隨機抽一支，
+// 完全沒有就回傳null（顯示預設慶祝emoji）
+// isPersonalVideo: 呼叫端用這個知道播的是不是個人影片，決定要不要顯示上傳提示
+async function getVideoToPlay() {
+  const personalVideo = await getAppState("family_video", null);
+  if (personalVideo) {
+    return { url: personalVideo, isPersonal: true };
+  }
+
+  const defaultVideos = await fetchDefaultVideos();
+  const url = pickWeightedRandom(defaultVideos);
+  if (url) {
+    return { url, isPersonal: false };
+  }
+
+  return { url: null, isPersonal: false };
+}

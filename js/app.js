@@ -5,12 +5,12 @@
 
 // ---- 開發用設定 ----
 // 上線前將此設為 false，即可隱藏遊戲畫面上的分數/關卡除錯資訊
-const DEBUG_MODE = true;
+const DEBUG_MODE = false;
 
 // ---- 測試模式：可在不受真實日期限制的情況下，模擬「過了好幾天」 ----
 // 上線前把 enabled 設為 false 即可完全關閉測試面板
 const TEST_MODE = {
-  enabled: true,
+  enabled: false,
   virtualDate: null // null = 使用真實日期；設定後 getTodayDateString() 會回傳這個值
 };
 
@@ -260,7 +260,7 @@ function applyTranslations() {
   document.getElementById("btn-giveup").textContent = t("giveUpButton");
 
   document.getElementById("dashboard-title").textContent = t("appName");
-  document.getElementById("streak-label").textContent = t("streakDays");
+  document.getElementById("streak-label").textContent = t("streakDaysShort");
   document.getElementById("album-label").textContent = t("familyAlbum");
   document.getElementById("memos-label").textContent = t("importantMemos");
   document.getElementById("btn-add-photo").textContent = t("addPhoto");
@@ -955,10 +955,19 @@ function showCompleteOverlay(title, mediaUrl, onContinue) {
       const video = document.createElement("video");
       video.src = mediaUrl;
       video.autoplay = true;
-      video.muted = true; // 手機瀏覽器通常需要muted才能自動播放
+      video.muted = true;
       video.playsInline = true;
       video.controls = true;
+      video.setAttribute("webkit-playsinline", "true"); // 舊版iOS Safari需要
+      // PWA環境有時候載入大型base64會失敗，改成fallback慶祝動畫而不是整個卡死
+      video.onerror = () => {
+        mediaContainer.innerHTML = '<div class="celebration-emoji">🎉</div>';
+      };
       mediaContainer.appendChild(video);
+      // 強制嘗試播放（PWA standalone模式有時候不會自動觸發autoplay）
+      video.play().catch(() => {
+        // 播放被瀏覽器拒絕（例如需要使用者手勢才能播），這時候有controls讓使用者自己按就好
+      });
     } else {
       // .gif、.png、.jpg 都走這裡；GIF會自動播放動畫
       const img = document.createElement("img");
@@ -1040,10 +1049,20 @@ async function endTodaySession(early = false) {
   }
 
   // 顯示溫暖的結束訊息（不顯示失敗字眼），如果有上傳問候影片，今天全部通關才播放
-  const familyVideo = await getAppState("family_video", null) || "videos/cheer.gif";
-  showCompleteOverlay(t("greatJobMessage"), familyVideo, async () => {
+  const videoResult = await getVideoToPlay();
+  showCompleteOverlay(t("greatJobMessage"), videoResult.url, async () => {
     await showDashboard();
   });
+
+  // 如果播的是預設影片（不是家人親自上傳的），在完成畫面下方顯示一個小提示
+  if (!videoResult.isPersonal && videoResult.url) {
+    const reminderEl = document.createElement("p");
+    reminderEl.textContent = t("uploadPersonalVideoReminder");
+    reminderEl.style.cssText = "font-size:0.875rem;color:#A89884;margin-top:12px;text-align:center;padding:0 24px;";
+    const completeScreen = document.getElementById("screen-complete");
+    const continueBtn = document.getElementById("btn-continue");
+    completeScreen.insertBefore(reminderEl, continueBtn);
+  }
 }
 
 // ============================================

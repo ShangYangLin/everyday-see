@@ -112,12 +112,14 @@
 
     <!-- 主頁面 / 儀表板 -->
     <div id="screen-dashboard" class="screen hidden dashboard">
-      <h1 id="dashboard-title">每天見</h1>
 
-      <div class="dashboard-item">
-        <h3 id="streak-label">連續訓練天數</h3>
-        <p id="streak-value">0</p>
+      <!-- 右上角連續訓練天數圓圈 -->
+      <div class="streak-badge" id="streak-badge">
+        <span id="streak-value">0</span>
+        <span class="streak-badge-label" id="streak-label">天</span>
       </div>
+
+      <h1 id="dashboard-title">每天見</h1>
 
       <div class="dashboard-item" id="album-dashboard-item">
         <h3 id="album-label">家人相冊</h3>

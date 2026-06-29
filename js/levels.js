@@ -11,8 +11,8 @@ const LEVEL_CONFIG = {
   6: { gridClass: "grid-3x3", type: "level_6" },
   7: { gridClass: "grid-3x4", type: "level_7", pairCount: 5, decoCount: 2 },
   8: { gridClass: "grid-3x4", type: "level_8", pairCount: 6, decoCount: 0 },
-  9: { gridClass: "grid-4x4", type: "level_9", pairCount: 7, decoCount: 2 },
-  10: { gridClass: "grid-4x4", type: "level_10", pairCount: 8, decoCount: 0 },
+  9: { gridClass: "grid-3x5", type: "level_9", pairCount: 7, decoCount: 1 },
+  10: { gridClass: "grid-3x6", type: "level_10", pairCount: 8, decoCount: 2 },
 };
 
 function getLevelWeight(level) {
