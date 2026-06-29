@@ -403,10 +403,6 @@ p {
 .streak-badge-label {
   font-size: 0.75rem;
 }
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-}
 
 .family-album-grid {
   display: grid;
