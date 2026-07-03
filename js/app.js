@@ -1505,6 +1505,7 @@ async function startTodaySession() {
   appState.giveUpCountToday = 0;
   appState.todayQuizQuestionsAsked = [];
   appState.todayBonusScore = 0;
+  appState.photoPromptAskedThisSession = false;
 
   const baseLevel = await getAppState("current_base_level", 1);
   const fullLevelsToPlay = [];
@@ -1573,15 +1574,11 @@ if (personsCount >= neededPersons && totalPhotos >= needed) {
 }
 
   // 今天已經問過了就跳過
-  const today = getTodayDateString();
-  const askedToday = await getAppState("photo_prompt_date", null);
-  if (askedToday === today) {
+  if (appState.photoPromptAskedThisSession) {
     onContinue();
     return;
   }
-
-  // 標記今天已問過
-  await setAppState("photo_prompt_date", today);
+  appState.photoPromptAskedThisSession = true;
 
   // 判斷要問新家人還是現有家人的第2張
   const needNewPerson = personsCount < neededPersons;
