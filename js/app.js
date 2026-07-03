@@ -366,7 +366,13 @@ async function handleConfirmRelation() {
 
   await saveCard(card);
   appState.pendingPhotoBlob = null;
-  await proceedOnboarding();
+  if (appState.photoUploadReturnCallback) {
+    const cb = appState.photoUploadReturnCallback;
+    appState.photoUploadReturnCallback = null;
+    cb();
+  } else {
+    await proceedOnboarding();
+  }
 }
 
 async function saveSecondPhoto() {
@@ -380,14 +386,26 @@ async function saveSecondPhoto() {
   }
   await saveCard(card);
   appState.pendingPhotoBlob = null;
-  await proceedOnboarding();
+  if (appState.photoUploadReturnCallback) {
+    const cb = appState.photoUploadReturnCallback;
+    appState.photoUploadReturnCallback = null;
+    cb();
+  } else {
+    await proceedOnboarding();
+  }
 }
 
 async function handleSkipUpload() {
   if (appState.pendingIsSecondPhoto) {
     // 跳過第二張照片，直接進下一步
     appState.pendingPhotoBlob = null;
+    if (appState.photoUploadReturnCallback) {
+    const cb = appState.photoUploadReturnCallback;
+    appState.photoUploadReturnCallback = null;
+    cb();
+  } else {
     await proceedOnboarding();
+  }
     return;
   }
 
@@ -629,6 +647,8 @@ async function playLevel(level, options = {}) {
     onComplete: options.onComplete
   };
 
+  const container = document.getElementById("game-container");
+  container.innerHTML = ""; // 先清空，避免手速快點到舊卡片
   renderGameBoard();
   showScreen("screen-game");
 
@@ -950,6 +970,10 @@ function showCompleteOverlay(title, mediaUrl, onContinue) {
   const mediaContainer = document.getElementById("complete-media");
   mediaContainer.innerHTML = "";
 
+  // 清掉上一次插入的影片提示按鈕，避免單關過關時還殘留
+  const existing = document.getElementById("video-reminder-btn");
+  if (existing) existing.remove();
+
   if (mediaUrl) {
     if (mediaUrl.endsWith(".mp4") || mediaUrl.endsWith(".webm") || mediaUrl.startsWith("data:video/")) {
       const video = document.createElement("video");
@@ -1056,7 +1080,12 @@ async function endTodaySession(early = false) {
 
   // 如果播的是預設影片（不是家人親自上傳的），在完成畫面下方顯示一個小提示
   if (!videoResult.isPersonal && videoResult.url) {
+    // 先清掉上一次插入的，避免重複出現
+    const existing = document.getElementById("video-reminder-btn");
+    if (existing) existing.remove();
+
     const reminderBtn = document.createElement("button");
+    reminderBtn.id = "video-reminder-btn";
     reminderBtn.textContent = t("uploadPersonalVideoReminder");
     reminderBtn.className = "btn btn-secondary";
     reminderBtn.style.cssText = "font-size:1rem;margin-top:12px;";
@@ -1516,6 +1545,67 @@ async function playLevelSequence(levels, index) {
   });
 }
 
+async function maybeShowPhotoUploadPrompt(onContinue) {
+  // 今天最高關卡
+  const highestLevel = Math.max(...appState.dailyLevelsToPlay);
+
+  // 各關需要的照片數
+  const photoNeeds = {
+    1: 2, 2: 2, 3: 3, 4: 3, 5: 4,
+    6: 4, 7: 5, 8: 6, 9: 7, 10: 8
+  };
+  const needed = photoNeeds[highestLevel] || 0;
+
+  // 今天照片夠用就跳過
+  const allCards = await getAllCards();
+  const realCards = allCards.filter(c => !c.isFallback);
+  const personsCount = realCards.length;
+const photosPerPerson = realCards.map(c => getPhotos(c).length);
+const totalPhotos = photosPerPerson.reduce((sum, n) => sum + n, 0);
+
+// 第6關以下看人數，第7關以上看總張數
+const personNeeds = { 1:2, 2:1, 3:3, 4:2, 5:2, 6:4, 7:4, 8:4, 9:4, 10:4 };
+const neededPersons = personNeeds[highestLevel] || 4;
+
+if (personsCount >= neededPersons && totalPhotos >= needed) {
+  onContinue();
+  return;
+}
+
+  // 今天已經問過了就跳過
+  const today = getTodayDateString();
+  const askedToday = await getAppState("photo_prompt_date", null);
+  if (askedToday === today) {
+    onContinue();
+    return;
+  }
+
+  // 標記今天已問過
+  await setAppState("photo_prompt_date", today);
+
+  // 判斷要問新家人還是現有家人的第2張
+  const needNewPerson = personsCount < neededPersons;
+
+  if (needNewPerson) {
+    const allCardIds = realCards.map(c => parseInt((c.cardId.match(/\d+/) || ["0"])[0]));
+    const nextNum = allCardIds.length > 0 ? Math.max(...allCardIds) + 1 : 1;
+    const newCardId = `card_slot_${String(nextNum).padStart(2, "0")}`;
+    appState.pendingRelationCardId = newCardId;
+    appState.pendingIsSecondPhoto = false;
+    appState.photoUploadReturnCallback = onContinue;
+    setupUploadScreen(t("askUploadAnother"));
+    showScreen("screen-upload");
+  } else {
+    const sorted = [...realCards].sort((a, b) => getPhotos(a).length - getPhotos(b).length);
+    const target = sorted[0];
+    appState.photoPromptTargetCard = target;
+    appState.pendingRelationCardId = target.cardId;
+    appState.pendingIsSecondPhoto = true;
+    appState.photoUploadReturnCallback = onContinue;
+    setupUploadScreen(t("askUploadSecondPhoto", { name: target.relation }));
+    showScreen("screen-upload");
+  }
+}
 // 處理某一關結束後的支線任務插入點
 // 第一天（首刷引導）不觸發任何支線任務，維持原本5關連續的設計
 async function handleAfterLevelInSequence(levels, index) {
@@ -1524,14 +1614,17 @@ async function handleAfterLevelInSequence(levels, index) {
     return;
   }
 
-  // index 0 = 剛玩完第1關 → 小提醒問答(第一次)
-  // index 2 = 剛玩完第3關 → 新增重要事項
-  // index 4 = 剛玩完第5關 → 小提醒問答(第二次，不重複)
   if (index === 0) {
+    // 玩完第1關 → 記憶事項問答（計分）
     await showQuizScreen(() => playLevelSequence(levels, index + 1));
+  } else if (index === 1) {
+    // 玩完第2關 → 詢問是否上傳照片
+    await maybeShowPhotoUploadPrompt(() => playLevelSequence(levels, index + 1));
   } else if (index === 2) {
+    // 玩完第3關 → 填入新記憶事項（分類問答）
     await maybeShowAddMemoScreen(() => playLevelSequence(levels, index + 1));
-  } else if (index === 4) {
+  } else if (index === 3) {
+    // 玩完第4關 → 記憶事項問答（計分，不重複今天第一次）
     await showQuizScreen(() => playLevelSequence(levels, index + 1));
   } else {
     await playLevelSequence(levels, index + 1);
@@ -1645,11 +1738,12 @@ async function maybeShowAddMemoScreen(onContinue) {
   if (categoryId === "birthday" || categoryId === "school") {
     const realCards = (await getAllCards()).filter(c => !c.isFallback && getPhotos(c).length > 0);
     if (realCards.length === 0) {
-      // 還沒有任何家人照片，這次先跳過、不標記完成，下次再抽到機會
       onContinue();
       return;
     }
-    showFamilyPickerForCategory(categoryId, realCards, onContinue);
+    // 直接隨機選一位家人，不跳出選人畫面
+    const randomCard = realCards[Math.floor(Math.random() * realCards.length)];
+    showCategoryYesNo(categoryId, randomCard.relation, onContinue);
     return;
   }
 

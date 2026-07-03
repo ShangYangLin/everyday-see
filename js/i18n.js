@@ -19,6 +19,8 @@ const TRANSLATIONS = {
     uploadButton: "選擇照片",
     confirmButton: "確定",
     skipButton: "跳過",
+    photoPromptNewPerson: "再上傳一位新家人的照片，關卡會更豐富喔！",
+    photoPromptExistingPerson: "要不要再上傳一張{name}的照片？",
 
     askUploadSecondPhoto: "請再上傳一張 {name} 的不同照片",
 
@@ -129,7 +131,7 @@ const TRANSLATIONS = {
     paywallSubscribeButton: "訂閱解鎖更多關卡",
     paywallLaterButton: "現在不用，先繼續玩1-6關",
     subscribeSimulatedMessage: "（測試用）已模擬訂閱成功，之後接上StoreKit後這裡會換成真正的付款流程。",
-    uploadPersonalVideoReminder: "現在播放的是預設問候影片，要不要上傳家人錄的問候影片？每天完成後就能看到家人的臉喔！",
+    uploadPersonalVideoReminder: "要不要上傳家人錄的問候影片？每天完成後就能看到家人的臉喔！",
 
     relationDefaults: {
       spouse: "老伴",
@@ -140,7 +142,7 @@ const TRANSLATIONS = {
   },
 
   en: {
-    appName: "See You Every Day",
+    appName: "See You EveryDay",
     welcomeTitle: "See You Every Day",
     welcomeSubtitle: "Companionship · Memory · Every Day",
     welcomeStart: "Start",
@@ -154,6 +156,8 @@ const TRANSLATIONS = {
     uploadButton: "Choose Photo",
     confirmButton: "Confirm",
     skipButton: "Skip",
+    photoPromptNewPerson: "Upload a photo of a new family member to enrich the game!",
+    photoPromptExistingPerson: "Would you like to upload another photo of {name}?",
 
     askUploadSecondPhoto: "Please upload another photo of {name}",
 
@@ -264,7 +268,7 @@ const TRANSLATIONS = {
     paywallSubscribeButton: "Subscribe to Unlock More Levels",
     paywallLaterButton: "Not now, keep playing Levels 1-6",
     subscribeSimulatedMessage: "(Test only) Subscription simulated successfully. This will be replaced with real StoreKit payment later.",
-    uploadPersonalVideoReminder: "This is a default greeting video. Would you like to upload a personal video from your family? You'll see their face every time you finish!",
+    uploadPersonalVideoReminder: "Would you like to upload a personal video from your family? You'll see their face every time you finish!",
 
     relationDefaults: {
       spouse: "Spouse",
@@ -289,6 +293,8 @@ const TRANSLATIONS = {
     uploadButton: "Elegir Foto",
     confirmButton: "Confirmar",
     skipButton: "Omitir",
+    photoPromptNewPerson: "¡Suba una foto de un nuevo familiar para enriquecer el juego!",
+    photoPromptExistingPerson: "¿Le gustaría subir otra foto de {name}?",
 
     askUploadSecondPhoto: "Por favor suba otra foto de {name}",
 
@@ -399,7 +405,7 @@ const TRANSLATIONS = {
     paywallSubscribeButton: "Suscribirse para Desbloquear Más Niveles",
     paywallLaterButton: "Ahora no, seguir con los Niveles 1-6",
     subscribeSimulatedMessage: "(Solo prueba) Suscripción simulada con éxito. Esto se reemplazará con el pago real de StoreKit más adelante.",
-    uploadPersonalVideoReminder: "Este es un video de saludo predeterminado. ¿Le gustaría subir un video personal de su familia?",
+    uploadPersonalVideoReminder: "¿Le gustaría subir un video personal de su familia?",
 
     relationDefaults: {
       spouse: "Cónyuge",
@@ -410,8 +416,8 @@ const TRANSLATIONS = {
   },
 
   ja: {
-    appName: "毎日会いましょう",
-    welcomeTitle: "毎日会いましょう",
+    appName: "毎日会おう",
+    welcomeTitle: "毎日会おう",
     welcomeSubtitle: "寄り添い・記憶・毎日",
     welcomeStart: "はじめる",
 
@@ -424,6 +430,8 @@ const TRANSLATIONS = {
     uploadButton: "写真を選ぶ",
     confirmButton: "確定",
     skipButton: "スキップ",
+    photoPromptNewPerson: "新しいご家族の写真をアップロードして、ゲームをもっと楽しくしましょう！",
+    photoPromptExistingPerson: "{name}の写真をもう一枚アップロードしませんか？",
 
     askUploadSecondPhoto: "{name}の別の写真をもう一枚アップロードしてください",
 
@@ -534,7 +542,7 @@ const TRANSLATIONS = {
     paywallSubscribeButton: "登録してもっと多くの関をプレイ",
     paywallLaterButton: "今はしない、第1～6関を続ける",
     subscribeSimulatedMessage: "(テスト用) 登録成功をシミュレートしました。StoreKit接続後は実際の決済処理に置き換わります。",
-    uploadPersonalVideoReminder: "これはデフォルトのご挨拶動画です。ご家族が録画した動画をアップロードしませんか？",
+    uploadPersonalVideoReminder: "ご家族が録画した動画をアップロードしませんか？",
 
     relationDefaults: {
       spouse: "配偶者",

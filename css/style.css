@@ -257,13 +257,15 @@ p {
 .grid-3x6 { grid-template-columns: repeat(3, 1fr); }
 
 /* 欄數較多時（第7關起），間距與留白縮小一點，把空間讓給卡片本身 */
-#game-container.grid-3x4,
+
 #game-container.grid-4x4 {
   gap: 6px;
   padding: 4px;
 }
 
 /* 第9、10關列數更多，間距再縮小一點 */
+#game-container.grid-3x3,
+#game-container.grid-3x4,
 #game-container.grid-3x5,
 #game-container.grid-3x6 {
   gap: 5px;
@@ -384,8 +386,8 @@ p {
   position: absolute;
   top: 16px;
   right: 16px;
-  width: 64px;
-  height: 64px;
+  width: 78px;
+  height: 78px;
   border-radius: 50%;
   background-color: #E8A87C;
   display: flex;
