@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>每天見 - See You Every Day</title>
+
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#E8A87C">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <link rel="stylesheet" href="css/style.css">
+</head>
+  <!-- ============================================
+       SAFARI和PWA的開發小工具，右下角會顯示小齒輪
+       ============================================ -->
+<!--
+<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+<script>eruda.init();</script>
+-->
+<body>
+
+  <!-- ============================================
+       畫面容器：所有畫面用 JS 動態切換顯示/隱藏
+       ============================================ -->
+  <div id="app" class="app-container">
+
+    <!-- Step 1-2: 歡迎畫面 -->
+    <div id="screen-welcome" class="screen">
+      <h1 id="welcome-title">每天見</h1>
+      <p id="welcome-subtitle">陪伴 · 記憶 · 每一天</p>
+      <button class="btn" id="btn-start">開始</button>
+    </div>
+
+    <!-- Step 3/7: 上傳照片畫面 -->
+    <div id="screen-upload" class="screen hidden">
+      <h2 id="upload-prompt">請上傳與您最親密的一位家人照片</h2>
+      <div class="upload-area" id="upload-area">
+        <span class="upload-icon">📷</span>
+      </div>
+      <input type="file" id="file-input" accept="image/*" style="display:none;">
+
+      <!-- 「這是誰？」輸入框，上傳後才顯示 -->
+      <div id="who-is-this-block" class="hidden">
+        <p id="who-is-this-label">這是誰？</p>
+        <input type="text" class="input-field" id="relation-input" placeholder="">
+        <button class="btn" id="btn-confirm-relation">確定</button>
+      </div>
+
+      <button class="btn btn-skip hidden" id="btn-skip-upload">跳過</button>
+    </div>
+
+    <!-- 上傳問候影片 -->
+    <div id="screen-video-upload" class="screen hidden">
+      <h2 id="video-upload-prompt"></h2>
+      <p id="video-upload-hint" class="long-text"></p>
+      <div class="upload-area" id="video-upload-area">
+        <span class="upload-icon">🎬</span>
+      </div>
+      <input type="file" id="video-file-input" accept="video/*" style="display:none;">
+      <p id="video-upload-feedback" class="quiz-feedback hidden"></p>
+      <button class="btn btn-skip" id="btn-skip-video-upload"></button>
+    </div>
+
+    <!-- 遊戲畫面 -->
+    <div id="screen-game" class="screen hidden">
+      <div id="debug-bar" class="debug-bar"></div>
+      <div id="game-container"></div>
+      <button class="btn-giveup" id="btn-giveup">放棄 / 休息一下</button>
+    </div>
+
+    <!-- 記憶任務畫面 (Step 12) -->
+    <div id="screen-memory-task" class="screen hidden overlay">
+      <h2 id="memory-task-title"></h2>
+      <p id="memory-task-question"></p>
+      <input type="text" class="input-field" id="memory-task-name" placeholder="姓名">
+      <input type="tel" class="input-field" id="memory-task-phone" placeholder="電話號碼">
+      <button class="btn" id="btn-save-memory-task">記下來</button>
+    </div>
+
+    <!-- 支線任務：小提醒問答 -->
+    <div id="screen-quiz" class="screen hidden overlay">
+      <h2 id="quiz-title">小提醒時間</h2>
+      <p id="quiz-question"></p>
+      <input type="text" class="input-field" id="quiz-answer-input">
+      <p id="quiz-feedback" class="quiz-feedback hidden"></p>
+      <p id="quiz-slow-reminder" class="quiz-slow-reminder hidden"></p>
+      <p id="quiz-hint-text" class="quiz-hint-text hidden"></p>
+      <button class="btn" id="btn-quiz-submit">確定</button>
+      <button class="btn btn-secondary hidden" id="btn-quiz-hint">給我提示</button>
+      <button class="btn btn-skip" id="btn-quiz-skip">先跳過</button>
+    </div>
+
+    <!-- 詢問是否新增重要記憶事項 -->
+    <div id="screen-add-memo" class="screen hidden overlay">
+      <h2 id="add-memo-title"></h2>
+      <input type="text" class="input-field" id="add-memo-question" placeholder="">
+      <input type="text" class="input-field" id="add-memo-answer" placeholder="">
+      <button class="btn" id="btn-save-new-memo">記下來</button>
+      <button class="btn btn-skip" id="btn-skip-new-memo">現在不用</button>
+    </div>
+
+    <!-- 重要記憶事項：固定分類引導問題(吃藥/生日/回診/學校/交通工具) -->
+    <div id="screen-category-task" class="screen hidden overlay">
+      <h2 id="category-task-title"></h2>
+      <p id="category-task-question"></p>
+      <div id="category-task-options"></div>
+    </div>
+
+    <!-- 過關 / 完成畫面 -->
+    <div id="screen-complete" class="screen hidden overlay">
+      <h2 id="complete-title">過關了！</h2>
+      <div id="complete-media"></div>
+      <button class="btn" id="btn-continue">繼續</button>
+    </div>
+
+    <!-- 主頁面 / 儀表板 -->
+    <div id="screen-dashboard" class="screen hidden dashboard">
+
+      <!-- 右上角連續訓練天數圓圈 -->
+      <div class="streak-badge" id="streak-badge">
+        <span id="streak-value">0</span>
+        <span class="streak-badge-label" id="streak-label">天</span>
+      </div>
+
+      <h1 id="dashboard-title">每天見</h1>
+
+      <div class="dashboard-item" id="album-dashboard-item">
+        <h3 id="album-label">家人相冊</h3>
+        <div class="family-album-grid" id="family-album-grid"></div>
+
+        <button class="btn btn-secondary" id="btn-add-photo">新增/更新照片</button>
+      </div>
+
+      <div class="dashboard-item" id="memos-dashboard-item">
+        <h3 id="memos-label">重要記憶事項</h3>
+        <div id="memos-list"></div>
+        <button class="btn btn-secondary" id="btn-manage-memos">新增/更新事項</button>
+      </div>
+
+      <button class="btn" id="btn-share">邀請家人</button>
+      <button class="btn btn-secondary" id="btn-play-today">開始今天的遊戲</button>
+
+      <div class="dashboard-footer">
+        <button class="footer-link" id="btn-about">關於</button>
+        <button class="footer-link" id="btn-settings">設定</button>
+        <button class="footer-link" id="btn-contact">聯繫</button>
+      </div>
+    </div>
+
+    <!-- 關於 -->
+    <div id="screen-about" class="screen hidden overlay">
+      <h2 id="about-title"></h2>
+      <p id="about-body" class="long-text"></p>
+      <button class="btn btn-skip" id="btn-about-back"></button>
+    </div>
+
+    <!-- 設定 -->
+    <div id="screen-settings" class="screen hidden overlay">
+      <h2 id="settings-title"></h2>
+
+      <h3 id="settings-fontsize-label" class="settings-section-label"></h3>
+      <div id="settings-fontsize-options" class="settings-option-row"></div>
+
+      <h3 id="settings-language-label" class="settings-section-label"></h3>
+      <select id="settings-language-select" class="input-field">
+        <option value="zh">中文</option>
+        <option value="en">English</option>
+        <option value="es">Español</option>
+        <option value="ja">日本語</option>
+      </select>
+
+      <button class="btn btn-secondary" id="btn-institution-entry"></button>
+      <button class="btn" id="btn-clear-all-data" style="display:none; background-color:#D64545;"></button>
+
+      <button class="btn btn-skip" id="btn-settings-back"></button>
+    </div>
+
+    <!-- 機構代碼輸入 -->
+    <div id="screen-institution-code" class="screen hidden overlay">
+      <h2 id="institution-code-title"></h2>
+      <input type="text" class="input-field" id="institution-code-input">
+      <button class="btn" id="btn-submit-institution-code"></button>
+      <p id="institution-code-feedback" class="quiz-feedback hidden"></p>
+      <button class="btn btn-skip" id="btn-institution-code-back"></button>
+    </div>
+
+    <!-- 聯繫 -->
+    <div id="screen-contact" class="screen hidden overlay">
+      <h2 id="contact-title"></h2>
+      <p id="contact-body" class="long-text"></p>
+      <a id="contact-email-link" class="btn" href="#"></a>
+      <button class="btn btn-skip" id="btn-contact-back"></button>
+    </div>
+
+    <!-- 付費門檻提示 -->
+    <div id="screen-paywall" class="screen hidden overlay">
+      <h2 id="paywall-title"></h2>
+      <p id="paywall-body"></p>
+      <button class="btn" id="btn-paywall-subscribe"></button>
+      <button class="btn btn-skip" id="btn-paywall-later"></button>
+    </div>
+
+    <!-- 管理照片畫面 -->
+    <div id="screen-manage-photos" class="screen hidden dashboard">
+      <h2 id="manage-photos-title">管理家人照片</h2>
+      <div id="manage-photos-list"></div>
+
+      <button class="btn btn-secondary" id="btn-add-new-person">新增一位家人</button>
+      <button class="btn" id="btn-back-to-dashboard">返回</button>
+    </div>
+
+  </div>
+
+  <!-- 引導提示：框住家人相冊的聚光燈 + 浮動對話框，點擊畫面任意處即可關閉 -->
+  <div id="album-spotlight" class="album-spotlight hidden"></div>
+  <div id="album-tooltip" class="album-tooltip hidden">
+    <span class="album-hint-arrow">↑</span>
+    <p id="album-tooltip-text" class="album-hint-text"></p>
+  </div>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/sync.js"></script>
+  <script src="js/levels.js"></script>
+  <script src="js/scoring.js"></script>
+  <script src="js/app.js"></script>
+
+  <script>
+    // 註冊 Service Worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(err => {
+          console.warn('Service worker registration failed:', err);
+        });
+      });
+    }
+  </script>
+
+</body>
+</html>
