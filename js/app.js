@@ -446,7 +446,14 @@ async function handleSkipUpload() {
     isFallback: true,
     fallbackImage: fallback.photos[0]
   });
-  await proceedOnboarding();
+
+  if (appState.photoUploadReturnCallback) {
+    const cb = appState.photoUploadReturnCallback;
+    appState.photoUploadReturnCallback = null;
+    cb();
+  } else {
+    await proceedOnboarding();
+  }
 }
 
 // ============================================
