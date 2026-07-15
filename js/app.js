@@ -65,10 +65,6 @@ let gameState = {
 // 免費用戶（個人未訂閱、企業未啟用授權碼）最多只能玩到這一關
 const FREE_LEVEL_CAP = 6;
 
-// 機構代碼驗證：目前先用寫在程式裡的測試代碼，之後要換成查Supabase的正式代碼表
-// ⚠️ 寫在前端程式碼裡的清單，任何人打開原始碼都看得到，正式機構上線前一定要換成後端驗證
-const VALID_INSTITUTION_CODES = ["DEMO2026", "SEEYOU-TEST"];
-
 async function isPremiumUnlocked() {
   const subscribed = await getAppState("is_subscribed", false);
   const enterpriseUnlocked = await getAppState("is_enterprise_unlocked", false);
@@ -76,27 +72,55 @@ async function isPremiumUnlocked() {
 }
 
 // 「訂閱」按鈕目前還沒接上StoreKit，先模擬解鎖成功，方便測試完整體驗
-// 之後接Capacitor + StoreKit時，這裡要換成真正處理購買結果後才設定is_subscribed
 async function handleSimulateSubscribe() {
   await setAppState("is_subscribed", true);
   alert(t("subscribeSimulatedMessage"));
 }
 
+// 機構代碼驗證：查詢Supabase的institution_codes表
+// 在Supabase SQL Editor執行：
+//   create table institution_codes (
+//     code text primary key,
+//     institution_name text,
+//     active boolean default true,
+//     created_at timestamptz default now()
+//   );
+//   alter table institution_codes enable row level security;
+//   create policy "anon can verify code" on institution_codes
+//   for select to anon using (active = true);
 async function handleSubmitInstitutionCode() {
   const input = document.getElementById("institution-code-input");
   const code = input.value.trim().toUpperCase();
   const feedbackEl = document.getElementById("institution-code-feedback");
 
-  if (VALID_INSTITUTION_CODES.includes(code)) {
-    await setAppState("is_enterprise_unlocked", true);
-    await setAppState("enterprise_code", code);
-    feedbackEl.textContent = t("institutionCodeSuccess");
-    feedbackEl.classList.remove("hidden");
-    setTimeout(() => showSettingsScreen(), 1000);
-  } else {
-    feedbackEl.textContent = t("institutionCodeError");
-    feedbackEl.classList.remove("hidden");
+  try {
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/institution_codes?code=eq.${encodeURIComponent(code)}&active=eq.true&select=code`,
+      {
+        headers: {
+          "apikey": SUPABASE_KEY,
+          "Authorization": `Bearer ${SUPABASE_KEY}`
+        }
+      }
+    );
+
+    if (response.ok) {
+      const results = await response.json();
+      if (results.length > 0) {
+        await setAppState("is_enterprise_unlocked", true);
+        await setAppState("enterprise_code", code);
+        feedbackEl.textContent = t("institutionCodeSuccess");
+        feedbackEl.classList.remove("hidden");
+        setTimeout(() => showSettingsScreen(), 1000);
+        return;
+      }
+    }
+  } catch (e) {
+    console.warn("機構代碼驗證失敗", e);
   }
+
+  feedbackEl.textContent = t("institutionCodeError");
+  feedbackEl.classList.remove("hidden");
 }
 
 // ============================================
@@ -1507,7 +1531,19 @@ async function startTodaySession() {
   appState.todayBonusScore = 0;
   appState.photoPromptAskedThisSession = false;
 
-  const baseLevel = await getAppState("current_base_level", 1);
+  const today = getTodayDateString();
+  const sessionDate = await getAppState("session_date", null);
+  let baseLevel;
+
+  if (sessionDate === today) {
+    // 今天已經玩過，從今天最初的起始關卡重新開始，不往上升
+    baseLevel = await getAppState("session_start_level", 1);
+  } else {
+    // 今天第一次玩，記錄今天的起始關卡
+    baseLevel = await getAppState("current_base_level", 1);
+    await setAppState("session_date", today);
+    await setAppState("session_start_level", baseLevel);
+  }
   const fullLevelsToPlay = [];
   for (let i = 0; i < SCORING_CONFIG.dailyLevelCount; i++) {
     const lvl = Math.min(baseLevel + i, 10);
