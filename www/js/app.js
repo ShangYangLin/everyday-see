@@ -1049,6 +1049,20 @@ function showCompleteOverlay(title, mediaUrl, onContinue) {
 async function endTodaySession(early = false) {
   hideGiveUpButton();
 
+  // 今天已經記錄過一次就不再更新分數和起始關卡，讓長輩可以重複練習但只記第一次成績
+  const todayDateStr = getTodayDateString();
+  const sessionDate = await getAppState("session_date", null);
+  const alreadyRecordedToday = sessionDate === todayDateStr && await getAppState("today_recorded", false);
+
+  if (alreadyRecordedToday) {
+    showCompleteOverlay(t("greatJobMessage"), (await getVideoToPlay()).url, async () => {
+      await showDashboard();
+    });
+    return;
+  }
+
+  await setAppState("today_recorded", true);
+
   const baseScore = calculateDailyScore(appState.todayLevelResults);
   const todayBonus = appState.todayBonusScore || 0;
   const todayScore = baseScore + todayBonus;
@@ -1537,6 +1551,14 @@ async function startTodaySession() {
   appState.todayQuizQuestionsAsked = [];
   appState.todayBonusScore = 0;
   appState.photoPromptAskedThisSession = false;
+
+  // 每次session開始時，如果是今天第一次玩才允許記錄
+  // today_recorded 的重置是在隔天自動發生（session_date不同就代表是新的一天）
+  const todayCheck = getTodayDateString();
+  const prevSessionDate = await getAppState("session_date", null);
+  if (prevSessionDate !== todayCheck) {
+    await setAppState("today_recorded", false);
+  }
 
   const today = getTodayDateString();
   const sessionDate = await getAppState("session_date", null);
