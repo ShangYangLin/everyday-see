@@ -1066,7 +1066,6 @@ async function endTodaySession(early = false) {
   const baseScore = calculateDailyScore(appState.todayLevelResults);
   const todayBonus = appState.todayBonusScore || 0;
   const todayScore = baseScore + todayBonus;
-  const todayDateStr = getTodayDateString();
   const hasFailedGrade = appState.todayLevelResults.some(r => r.grade === 1);
 
   // 把今天的問答加分存起來，這樣明天回頭重建「昨天分數」時才能正確算進去
